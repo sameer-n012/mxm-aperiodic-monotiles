@@ -21,7 +21,6 @@ class Tile:
         """
 
         self.vertices = vertices
-        self.transformation = transforms.Affine2D().rotate(0)
 
     def draw(self):
         """
