@@ -1,0 +1,10 @@
+*.idea
+out/
+bin/
+__pycache__
+*.env
+target/
+build/
+env/
+*.ipynb_checkpoints
+
