@@ -1,5 +1,6 @@
 import numpy as np
 from abc import ABC, abstractmethod
+from typing import Union, Optional
 
 
 class Grid(ABC):
@@ -20,7 +21,7 @@ class Grid(ABC):
 
     @staticmethod
     @abstractmethod
-    def is_adjacent(x: tuple | list | np.array, y: tuple | list | np.array):
+    def is_adjacent(x: Union[tuple, list, np.array], y: Union[tuple, list, np.array]):
         pass
 
     # TODO - delete unused
