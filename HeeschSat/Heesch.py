@@ -3,10 +3,11 @@ import numpy as np
 import itertools
 from pysat.solvers import Solver
 
+
 class Heesch(ABC):
 
-    def __init__(self):
-        self.k_cor = None
+    def __init__(self, coronas):
+        self.k_cor = coronas
         self.grid = None
         self.transforms = {}
         self.cells = {}
@@ -24,19 +25,21 @@ class Heesch(ABC):
                                                     range(0, self.grid.size[1]),
                                                     range(0, len(self.rotation_matrices))
                                                     )):
-            translate_mat = np.column_stack((np.full(np.shape_size, val[1]), np.full(np.shape_size, val[2])))
+            translate_mat = np.empty(self.shape_size, dtype=int)
+            translate_mat[:, 0] = val[1]
+            translate_mat[:, 1] = val[2]
             rotate_mat = self.rotation_matrices[val[3]]
             transform = np.matmul(rotate_mat, self.shape.T).T + translate_mat
 
             # only include transforms that fall within the bounds of the grid
             if self.grid.in_bounds(transform):
-                halo = np.unique([i for c in self.shape for i in self.grid.haloIdx(c)])
-                self.transforms[val] = idx, transform, halo
+                halo = np.unique([i for c in self.shape for i in self.grid.haloIdx(c)], axis=0)
+                self.transforms[tuple(val)] = idx, transform, halo
 
         # cell variables (if a cell is taken)
         offset = len(self.transforms)
         for idx, i in enumerate(self.grid.indices()):
-            self.cells[i] = offset + idx
+            self.cells[tuple(i)] = offset + idx
 
     def construct_sat(self) -> Solver:
         """
@@ -46,7 +49,7 @@ class Heesch(ABC):
         s = self.sat
 
         # 0-corona always used
-        k_0 = self.transforms[(0, self.grid.size[0]/2, self.grid.size[1]/2, 0)]
+        k_0 = self.transforms[(0, self.grid.size[0] / 2, self.grid.size[1] / 2, 0)]
         s.add_clause([k_0])
 
         # if a transform is used, its cells are used
@@ -149,14 +152,3 @@ class Heesch(ABC):
         self.sat.delete()
         self.sat = None
         self.model = None
-
-
-
-
-
-
-
-
-
-
-

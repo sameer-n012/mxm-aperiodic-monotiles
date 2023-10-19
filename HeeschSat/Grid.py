@@ -100,5 +100,5 @@ class Grid(ABC):
         """
 
         return ((shape[:, 0] < self.size[0]).all() and
-                (shape[:, 1] < self.size[0]).all() and
-                (shape > 0).all())
+                (shape[:, 1] < self.size[1]).all() and
+                (shape >= 0).all())
