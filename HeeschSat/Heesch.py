@@ -17,7 +17,7 @@ class Heesch(ABC):
     def generate_variables(self):
 
         # transform variables (if a transform is used)
-        for idx, val in enumerate(itertools.product(range(0, self.k_cor),
+        for idx, val in enumerate(itertools.product(range(0, self.k_cor + 1),
                                                     range(0, self.grid.size[0]),
                                                     range(0, self.grid.size[1]),
                                                     range(0, len(self.rotation_matrices))
@@ -47,10 +47,81 @@ class Heesch(ABC):
 
         # if a transform is used, its cells are used
         for k, v in self.transforms:
-            for c in v[2]:
+
+            # ad each cell in the transform
+            for c in v[1]:
                 s.add_clause([-v[0], self.cells[c]])
 
         # if a cell is used, some transform must use it
+        for k1, v1 in self.cells:
+            lst = [-v1[0]]
+
+            # check if the cell is in the transform for
+            # each transform
+            for k2, v2 in self.transforms:
+                if k1 in v2[1]:
+                    lst.append(v2[0])
+            s.add_clause(lst)
+
+        # if a transform is used in an interior corona, its halo cells must
+        # be used
+        for k, v in self.transforms:
+
+            # do not consider nth corona
+            if k[0] == self.k_cor:
+                continue
+
+            # consider all cells in halo of transform
+            for c in v[2]:
+                s.add_clause([-v[0], self.cells[c]])
+
+        # used transforms cannot overlap
+        for k1, v1 in self.transforms:
+            for k2, v2 in self.transforms:
+
+                # only consider pairings where idx1 < idx2 so unnecessary
+                # clauses are not generated
+                if v1[0] >= v2[0]:
+                    continue
+
+                # checks if any two rows in the transform are the same
+                if self.grid.is_overlapping(v1[1], v2[1]):
+                    s.add_clause([-v1[0], -v2[0]])
+
+        # if a transform is used in a k corona, it must be adjacent to one
+        # in a k-1 corona
+        for k1, v1 in self.transforms:
+            lst = [-v1[0]]
+            for k2, v2 in self.transforms:
+
+                # only consider the k and k-1 coronas
+                if k1[0] != k2[0] + 1:
+                    continue
+
+                # checks if any two rows in the transform and second transform's
+                # halo are the same
+                if self.grid.is_overlapping(v1[1], v2[2]):
+                    lst.append(v2[0])
+            s.add_clause(lst)
+
+        # if a transform is used in a k corona, it cannot be adjacent to one
+        # in a 0...k-2 corona
+        for k1, v1 in self.transforms:
+            for k2, v2 in self.transforms:
+
+                # only consider coronas < k-1
+                if k2[0] >= k1[0] - 1:
+                    continue
+
+                # checks if any two rows in the transform and second transform's
+                # halo are the same
+                if self.grid.is_overlapping(v1[1], v2[2]):
+                    s.add_clause([-v1[0], -v2[0]])
+
+
+
+
+
 
 
         c1 = [-1, 2]
