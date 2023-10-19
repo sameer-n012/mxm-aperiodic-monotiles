@@ -13,6 +13,8 @@ class Heesch(ABC):
         self.rotation_matrices = []
         self.shape = None
         self.shape_size = None
+        self.sat = Solver(name="g3")
+        self.model = None
 
     def generate_variables(self):
 
@@ -25,21 +27,23 @@ class Heesch(ABC):
             translate_mat = np.column_stack((np.full(np.shape_size, val[1]), np.full(np.shape_size, val[2])))
             rotate_mat = self.rotation_matrices[val[3]]
             transform = np.matmul(rotate_mat, self.shape.T).T + translate_mat
-            halo = np.unique([i for c in self.shape for i in self.grid.haloIdx(c)])
-            self.transforms[val] = idx, transform, halo
+
+            # only include transforms that fall within the bounds of the grid
+            if self.grid.in_bounds(transform):
+                halo = np.unique([i for c in self.shape for i in self.grid.haloIdx(c)])
+                self.transforms[val] = idx, transform, halo
 
         # cell variables (if a cell is taken)
         offset = len(self.transforms)
         for idx, i in enumerate(self.grid.indices()):
             self.cells[i] = offset + idx
 
-    @abstractmethod
     def construct_sat(self) -> Solver:
         """
-        Note that a -> b | c === -a | b | c
+        Note that a, b => c | d === -a | -b | c | d
         """
 
-        s = Solver(name='g3')
+        s = self.sat
 
         # 0-corona always used
         k_0 = self.transforms[(0, self.grid.size[0]/2, self.grid.size[1]/2, 0)]
@@ -118,26 +122,34 @@ class Heesch(ABC):
                 if self.grid.is_overlapping(v1[1], v2[2]):
                     s.add_clause([-v1[0], -v2[0]])
 
+        # TODO - add hole suppression
+        # not sure why we can't just have a and b and c and d => e
+        # where a, b, c, d, are the tiles adjacent to e
+        for k, v in self.cells:
+            lst = []
 
+            # find all adjacent cells
+            for c in self.grid.haloIdx(k):
+                lst.append(-self.cells[c])
 
-
-
-
-
-        c1 = [-1, 2]
-        s.add_clause(c1)
+            lst.append(v[0])
+            s.add_clause(lst)
 
         return s
 
-    @abstractmethod
-    def solve_sat(self, sat: Solver) -> list:
-        if sat.solve():
-            m = sat.get_model()
+    def solve_sat(self) -> list:
+        if self.sat.solve():
+            self.model = self.sat.get_model()
         else:
-            m = None
+            self.model = None
 
-        sat.delete()
-        return m
+        return self.model
+
+    def clear_sat(self):
+        self.sat.delete()
+        self.sat = None
+        self.model = None
+
 
 
 

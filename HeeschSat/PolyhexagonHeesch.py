@@ -12,9 +12,3 @@ class PolyhexagonHeesch(Heesch):
         self.transforms = {}
         self.rotation_matrices = []
         self.k_cor = coronas
-
-    def construct_sat(self):
-        pass
-
-    def solve_sat(self, sat: str):
-        pass

@@ -20,7 +20,7 @@ class Grid(ABC):
 
     @staticmethod
     @abstractmethod
-    def is_adjacent(x, y):
+    def is_adjacent(x: tuple | list | np.array, y: tuple | list | np.array):
         pass
 
     # TODO - delete unused
@@ -70,7 +70,7 @@ class Grid(ABC):
 
         return np.array([(i, j) for j in range(self.size[1]) for i in range(self.size[0])])
 
-    def is_overlapping(self, m1, m2) -> bool:
+    def is_overlapping(self, m1: np.ndarray, m2: np.ndarray) -> bool:
         """
         Checks whether the two matrices, m1 and m2 have any similar rows. Used
         to test if there are overlapping points in two shapes. It is required
@@ -86,3 +86,18 @@ class Grid(ABC):
         stack = np.concatenate((m1, m2), axis=0)
         _, c = np.unique(stack, axis=0, return_counts=True)
         return (c != 1).all()
+
+    def in_bounds(self, shape: np.ndarray) -> bool:
+        """
+        Checks whether the shape given is within the bounds of the grid. The
+        shape given should be of the form: [
+            [ x_1, y_1 ],
+            [ x_2, y_2 ],
+            ...
+            [ x_n, y_n ]
+        ] where each row is a cell the shape occupies
+        """
+
+        return ((shape[:, 0] < self.size[0]).all() and
+                (shape[:, 1] < self.size[0]).all() and
+                (shape > 0).all())
