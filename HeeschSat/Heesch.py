@@ -3,6 +3,7 @@ import numpy as np
 import itertools
 from pysat.solvers import Solver
 from time import time
+from multiprocessing import Process, Manager, Pool
 
 
 class Heesch(ABC):
@@ -36,7 +37,7 @@ class Heesch(ABC):
 
             # only include transforms that fall within the bounds of the grid
             if self.grid.in_bounds(transform):
-                halo = np.unique([i for c in self.shape for i in self.grid.haloIdx(c)], axis=0)
+                halo = np.unique([i for c in transform for i in self.grid.haloIdx(c)], axis=0)
                 self.transforms[tuple(val)] = idx + 1, transform, halo
 
         # cell variables (if a cell is taken)
@@ -96,7 +97,14 @@ class Heesch(ABC):
 
         print(time() - ts)
 
-        # TODO - optimize (takes a long time)
+        # with Pool(processes=8) as pool:
+        #     pool.map()
+        #
+        # print(time() - ts)
+
+
+        # TODO - optimize (takes a long time ~2000s for k=2)
+        #  probably caused by the is_overlapping method
         # used transforms cannot overlap
         for k1, v1 in self.transforms.items():
             for k2, v2 in self.transforms.items():
@@ -112,9 +120,14 @@ class Heesch(ABC):
 
         print(time() - ts)
 
+        # TODO - optimize (takes a long time ~30s for k=2)
+        #  probably caused by the is_overlapping method
         # if a transform is used in a k corona, it must be adjacent to one
         # in a k-1 corona
         for k1, v1 in self.transforms.items():
+            if k1[0] == 0:
+                continue
+
             lst = [-v1[0]]
             for k2, v2 in self.transforms.items():
 
@@ -126,8 +139,9 @@ class Heesch(ABC):
                 # halo are the same
                 if self.grid.is_overlapping(v1[1], v2[2]):
                     lst.append(v2[0])
-            if len(lst) > 1:
-                s.add_clause(lst)
+
+            # if len(lst) > 1:
+            #     s.add_clause(lst)
 
         print(time() - ts)
 
@@ -191,3 +205,6 @@ class Heesch(ABC):
         idx -= v3*(len(self.rotation_matrices))
 
         return v1, v2, v3, idx
+
+
+# def temp(k1, v1, k2, v2):

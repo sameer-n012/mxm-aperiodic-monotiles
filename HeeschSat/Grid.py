@@ -47,7 +47,7 @@ class Grid(ABC):
         ] where each row is a distinct cell
         """
 
-        arr = np.array([self.is_adjacent(i, cell) for i in self.indices()]).reshape(self.size)
+        arr = np.array([self.is_adjacent(i, cell) for i in self.indices()]).reshape(self.size, order='F')
         return np.transpose(np.nonzero(arr))
 
     def apply_basis(self, coords: np.ndarray) -> np.array:
@@ -86,7 +86,7 @@ class Grid(ABC):
 
         stack = np.concatenate((m1, m2), axis=0)
         _, c = np.unique(stack, axis=0, return_counts=True)
-        return (c != 1).all()
+        return not (c == 1).all()
 
     def in_bounds(self, shape: np.ndarray) -> bool:
         """

@@ -15,16 +15,13 @@ print('hi')
 # ph = PolyhexagonHeesch(shape, 3, (6, 6))
 # ph.generate_variables()
 
-six_hex = np.array([
-    [0,0],
-    [0,1],
-    [0,-1],
-    [-1,2],
-    [0,-2],
-    [-1,-2]
+two_hex = np.array([
+    [0, 0],
+    [0, 1],
+    [-1, 0]
 ])
 
-ph = PolyhexagonHeesch(six_hex, 1, (10, 10))
+ph = PolyhexagonHeesch(two_hex, 1, (10, 10))
 ph.generate_variables()
 print('generated')
 ph.construct_sat()
