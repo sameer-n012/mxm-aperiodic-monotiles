@@ -84,9 +84,10 @@ class Grid(ABC):
         ]
         """
 
-        stack = np.concatenate((m1, m2), axis=0)
-        _, c = np.unique(stack, axis=0, return_counts=True)
-        return not (c == 1).all()
+        # stack = np.concatenate((m1, m2), axis=0)
+        # _, c = np.unique(stack, axis=0, return_counts=True)
+        # return not (c == 1).all()
+        return len(set(map(tuple, m1)) & set(map(tuple, m2))) > 0
 
     def in_bounds(self, shape: np.ndarray) -> bool:
         """

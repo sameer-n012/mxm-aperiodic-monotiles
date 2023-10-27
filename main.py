@@ -21,7 +21,7 @@ two_hex = np.array([
     [-1, 0]
 ])
 
-ph = PolyhexagonHeesch(two_hex, 1, (8,8))
+ph = PolyhexagonHeesch(two_hex, 2, (8,8))
 ph.generate_variables()
 print('generated')
 ph.construct_sat()
