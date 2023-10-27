@@ -24,7 +24,7 @@ class PolyhexagonHeesch(Heesch):
         self.shape = shape
         self.shape_size = self.shape.shape
 
-    def plot(self):
+    def plot(self, show=True, write=False, filename=None, directory=None):
         if self.model is None:
             return
 
@@ -80,6 +80,15 @@ class PolyhexagonHeesch(Heesch):
                 ax.add_patch(hexagon)
                 # ax.text(c[0], c[1], f'{s[j][0]}, {s[j][1]}', verticalalignment='center', '')
         plt.autoscale(enable=True)
-        plt.show()
+        if write and filename is not None:
+            if directory is not None:
+                plt.savefig(directory + '/' + filename + '.png')
+            else:
+                plt.savefig(filename + '.png')
+
+        if show:
+            plt.show()
+
+        return
 
 

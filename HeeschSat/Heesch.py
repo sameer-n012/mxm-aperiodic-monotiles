@@ -20,8 +20,11 @@ class Heesch(ABC):
         self.shape_size = None
         self.sat = None
         self.model = None
+        self.times = [0.0]*14
 
     def generate_variables(self):
+
+        self.times[0] = time()
 
         max_transforms = (self.k_cor + 1)*self.grid.size[0]*self.grid.size[1]*len(self.rotation_matrices)
 
@@ -42,10 +45,14 @@ class Heesch(ABC):
                 halo = np.unique([i for c in transform for i in self.grid.haloIdx(c)], axis=0)
                 self.transforms[tuple(val)] = idx + 1, transform, halo
 
+        self.times[1] = time()
+
         # cell variables (if a cell is taken)
         offset = max_transforms + 1
         for idx, i in enumerate(self.grid.indices()):
             self.cells[tuple(i)] = offset + idx
+
+        self.times[2] = time()
 
     def construct_sat(self) -> Solver:
         """
@@ -54,13 +61,13 @@ class Heesch(ABC):
 
         s = Solver(name="g3")
 
-        ts = time()
+        self.times[3] = time()
 
         # 0-corona always used
         k_0 = self.transforms[(0, int(self.grid.size[0] / 2)-1, int(self.grid.size[1] / 2)-1, 0)]
         s.add_clause([k_0[0]])
 
-        print(time() - ts)
+        self.times[4] = time()
 
         # if a transform is used, its cells are used
         for k, v in self.transforms.items():
@@ -69,7 +76,7 @@ class Heesch(ABC):
             for c in v[1]:
                 s.add_clause([-v[0], self.cells[tuple(c)]])
 
-        print(time() - ts)
+        self.times[5] = time()
 
         # if a cell is used, some transform must use it
         for k1, v1 in self.cells.items():
@@ -82,7 +89,7 @@ class Heesch(ABC):
                     lst.append(v2[0])
             s.add_clause(lst)
 
-        print(time() - ts)
+        self.times[6] = time()
 
 
         # if a transform is used in an interior corona, its halo cells must
@@ -97,7 +104,7 @@ class Heesch(ABC):
             for c in v[2]:
                 s.add_clause([-v[0], self.cells[tuple(c)]])
 
-        print(time() - ts)
+        self.times[7] = time()
 
         # with Pool(processes=8) as pool:
         #     pool.map()
@@ -107,19 +114,33 @@ class Heesch(ABC):
         # TODO - optimize (takes a long time ~2000s for k=2)
         #  probably caused by the is_overlapping method
         # used transforms cannot overlap
-        for k1, v1 in self.transforms.items():
-            for k2, v2 in self.transforms.items():
+        # for k1, v1 in self.transforms.items():
+        #     for k2, v2 in self.transforms.items():
+        #
+        #         # only consider pairings where idx1 < idx2 so unnecessary
+        #         # clauses are not generated
+        #         if v1[0] >= v2[0]:
+        #             continue
+        #
+        #         # checks if any two rows in the transform are the same
+        #         if self.grid.is_overlapping(v1[1], v2[1]):
+        #             s.add_clause([-v1[0], -v2[0]])
 
-                # only consider pairings where idx1 < idx2 so unnecessary
-                # clauses are not generated
-                if v1[0] >= v2[0]:
-                    continue
+        # same speed as above
+        shape_rad = max(self.shape_size[0], self.shape_size[1])
+        for (k1, v1), (k2, v2) in itertools.combinations(self.transforms.items(), 2):
+            # if np.max(np.abs(v1[1][0] - v2[1][0])) > 2*shape_rad:
+                # continue
 
-                # checks if any two rows in the transform are the same
-                if self.grid.is_overlapping(v1[1], v2[1]):
-                    s.add_clause([-v1[0], -v2[0]])
+            # seems to not change speed at k=0,1?
+            if max(abs(v1[1][0][0] - v2[1][0][0]), abs(v1[1][0][1] - v2[1][0][1])) > 2*shape_rad:
+                continue
 
-        print(time() - ts)
+            # checks if any two rows in the transform are the same
+            if self.grid.is_overlapping(v1[1], v2[1]):
+                s.add_clause([-v1[0], -v2[0]])
+
+        self.times[8] = time()
 
         # TODO - optimize (takes a long time ~30s for k=2)
         #  probably caused by the is_overlapping method
@@ -136,6 +157,9 @@ class Heesch(ABC):
                 if k1[0] != k2[0] + 1:
                     continue
 
+                # if np.max(np.abs(v1[1][0] - v2[1][0])) > 2 * (shape_rad + 1):
+                #     continue
+
                 # checks if any two rows in the transform and second transform's
                 # halo are the same
                 if self.grid.is_overlapping(v1[1], v2[2]):
@@ -144,7 +168,7 @@ class Heesch(ABC):
             # if len(lst) > 1:
             #     s.add_clause(lst)
 
-        print(time() - ts)
+        self.times[9] = time()
 
         # if a transform is used in a k corona, it cannot be adjacent to one
         # in a 0...k-2 corona
@@ -160,7 +184,7 @@ class Heesch(ABC):
                 if self.grid.is_overlapping(v1[1], v2[2]):
                     s.add_clause([-v1[0], -v2[0]])
 
-        print(time() - ts)
+        self.times[10] = time()
         #
         # # TODO - add hole suppression
         # # not sure why we can't just have a and b and c and d => e
@@ -175,18 +199,22 @@ class Heesch(ABC):
         #     lst.append(v)
         #     s.add_clause(lst)
 
-        print(time() - ts)
+        self.times[11] = time()
 
         self.sat = s
         return self.sat
 
     def solve_sat(self) -> list:
+        self.times[12] = time()
+
         if self.sat.solve():
             print('solved sat')
             self.model = self.sat.get_model()
         else:
             print('unsolvable')
             self.model = None
+
+        self.times[13] = time()
 
         return self.model
 
@@ -210,8 +238,53 @@ class Heesch(ABC):
 
         return v1, v2, v3, idx
 
+    def write(self, directory='.'):
+        filename = str(int(time()))
+
+        with open(directory + '/' + filename + '.txt', 'w+') as f:
+
+            f.write(f'File: {filename}\n')
+            f.write(f'Start Time: {self.times[0]}\n')
+            f.write(f'Grid Size: {self.grid.size}\n')
+            f.write(f'Coronas: {self.k_cor}\n')
+            f.write(f'Shape Size: {self.shape_size}\n')
+            f.write(f'Shape: \n')
+            f.write(f'{str(self.shape)}\n')
+
+            f.write('--------------------------------------------------\n')
+
+            f.write(f'SAT Model: \n')
+            if self.model is not None:
+                f.write(f'\t{str(self.model)}\n')
+            else:
+                f.write(f'\tNo Model (Unsolvable)\n')
+            f.write('Times: \n')
+            sum_time = 0.0
+            for i, t in enumerate(self.times):
+                f.write(f'\tTimestamp {i:02d}: {t-sum_time-self.times[0]}\n')
+                sum_time = t - self.times[0]
+            f.write(f'Total Time: {sum_time}\n')
+
+            f.write('--------------------------------------------------\n')
+
+            f.write('Transforms: \n')
+            if self.model is not None:
+                for i in self.model:
+                    if i <= 0:
+                        continue
+                    t = self.get_transform(i)
+                    if t is None:
+                        break
+                    f.write(f"Transform ID: {i}: \n")
+                    f.write(f'{str(self.transforms[t][1])}\n')
+            else:
+                f.write('\tNo Model (Unsolvable)')
+
+        self.plot(show=False, write=True, filename=filename, directory=directory)
+
+
     @abstractmethod
-    def plot(self):
+    def plot(self, show, write, filename, directory):
         pass
 
 

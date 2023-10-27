@@ -5,6 +5,6 @@
 - [Anaconda Getting Started Tutorial](https://docs.conda.io/projects/conda/en/latest/user-guide/getting-started.html)
 
 ### Necessary Packages
-- tkinter
-- matplotlib
-- numpy
+- [matplotlib](https://pypi.org/project/matplotlib/)
+- [numpy](https://pypi.org/project/numpy/)
+- [pysat](https://pysathq.github.io/)
