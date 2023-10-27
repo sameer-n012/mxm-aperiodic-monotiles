@@ -8,6 +8,8 @@ from multiprocessing import Process, Manager, Pool
 
 class Heesch(ABC):
 
+    plot_colors = ['k', 'b', 'r', 'y', 'g', 'c', 'm']
+
     def __init__(self, coronas):
         self.k_cor = coronas
         self.grid = None
@@ -55,7 +57,7 @@ class Heesch(ABC):
         ts = time()
 
         # 0-corona always used
-        k_0 = self.transforms[(0, int(self.grid.size[0] / 2), int(self.grid.size[1] / 2), 0)]
+        k_0 = self.transforms[(0, int(self.grid.size[0] / 2)-1, int(self.grid.size[1] / 2)-1, 0)]
         s.add_clause([k_0[0]])
 
         print(time() - ts)
@@ -101,7 +103,6 @@ class Heesch(ABC):
         #     pool.map()
         #
         # print(time() - ts)
-
 
         # TODO - optimize (takes a long time ~2000s for k=2)
         #  probably caused by the is_overlapping method
@@ -197,6 +198,9 @@ class Heesch(ABC):
     def get_transform(self, idx):
 
         idx -= 1
+        if idx >= (self.k_cor+1) * self.grid.size[0] * self.grid.size[1] * len(self.rotation_matrices):
+            return None
+
         v1 = int(idx / (self.grid.size[0] * self.grid.size[1] * len(self.rotation_matrices)))
         idx -= v1*(self.grid.size[0] * self.grid.size[1] * len(self.rotation_matrices))
         v2 = int(idx / (self.grid.size[1] * len(self.rotation_matrices)))
@@ -205,6 +209,10 @@ class Heesch(ABC):
         idx -= v3*(len(self.rotation_matrices))
 
         return v1, v2, v3, idx
+
+    @abstractmethod
+    def plot(self):
+        pass
 
 
 # def temp(k1, v1, k2, v2):

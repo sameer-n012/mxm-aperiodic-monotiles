@@ -21,29 +21,33 @@ two_hex = np.array([
     [-1, 0]
 ])
 
-ph = PolyhexagonHeesch(two_hex, 1, (10, 10))
+ph = PolyhexagonHeesch(two_hex, 1, (8,8))
 ph.generate_variables()
 print('generated')
 ph.construct_sat()
 print(ph.sat)
 ph.solve_sat()
 
-m = ph.model
-
-minimum = 10000
-for i in m:
-    if i <= 0:
-        continue
-    print(i)
-    if i < minimum:
-        minimum = i
-
-for k, v in ph.transforms.items():
-    if v[0] == minimum:
-        print(k)
-
+# m = ph.model
+#
+# minimum = 10000
+# for i in m:
+#     if i <= 0:
+#         continue
+#     print(i)
+#     if i < minimum:
+#         minimum = i
+#
+# for k, v in ph.transforms.items():
+#     if v[0] == minimum:
+#         print(k)
+#
+# print(m)
 
 print('a')
-print(m)
+
+ph.plot()
+
+print('b')
 
 
