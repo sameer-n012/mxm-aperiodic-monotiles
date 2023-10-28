@@ -106,8 +106,9 @@ class Heesch(ABC):
 
         self.times[7] = time()
 
-        # with Pool(processes=8) as pool:
-        #     pool.map()
+        lst = Manager().list()
+        with Pool(processes=8) as pool:
+            pool.map(self.temp, [(i, lst) for i in range(0,self.k_cor)])
         #
         # print(time() - ts)
 
@@ -208,10 +209,8 @@ class Heesch(ABC):
         self.times[12] = time()
 
         if self.sat.solve():
-            print('solved sat')
             self.model = self.sat.get_model()
         else:
-            print('unsolvable')
             self.model = None
 
         self.times[13] = time()
@@ -287,5 +286,17 @@ class Heesch(ABC):
     def plot(self, show, write, filename, directory):
         pass
 
+    def temp(self, k):
+        shape_rad = max(self.shape_size[0], self.shape_size[1])
+        for (k1, v1), (k2, v2) in itertools.combinations(self.transforms.items(), 2):
+            # if np.max(np.abs(v1[1][0] - v2[1][0])) > 2*shape_rad:
+            # continue
 
-# def temp(k1, v1, k2, v2):
+            # seems to not change speed at k=0,1?
+            if max(abs(v1[1][0][0] - v2[1][0][0]), abs(v1[1][0][1] - v2[1][0][1])) > 2 * shape_rad:
+                continue
+
+            # checks if any two rows in the transform are the same
+            if self.grid.is_overlapping(v1[1], v2[1]):
+                lst.append([-v1[0], -v2[0]])
+

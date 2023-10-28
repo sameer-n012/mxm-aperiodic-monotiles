@@ -7,7 +7,7 @@ tile = np.array([
     [-1, 0]
 ])
 
-ph = PolyhexagonHeesch(tile, 1, (6,6))
+ph = PolyhexagonHeesch(tile, 1, (8,8))
 ph.generate_variables()
 ph.construct_sat()
 ph.solve_sat()
