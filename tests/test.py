@@ -13,3 +13,4 @@ if __name__ == '__main__':
     ph.construct_sat()
     ph.solve_sat()
     ph.write(directory='tests/out')
+    print('done')

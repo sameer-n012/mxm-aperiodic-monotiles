@@ -118,17 +118,20 @@ class Heesch(ABC):
 
         self.times[7] = time()
 
-        # print(cpu_count())
+        print(cpu_count())
+        print('here0')
         with Manager() as manager:
             lst = manager.list()
-            with Pool(processes=cpu_count()) as pool:
+            with Pool(processes=1) as pool:
                 pool.imap_unordered(self.check_overlap_helper, [(i, lst) for i in range(0, self.grid.size[0])])
+            print(lst)
             for l in lst:
-                if -253 in l and -680 in l:
-                    print('here')
-                else:
-                    print('nothere')
+                if -253 in l or -680 in l:
+                    print('here', l)
+                # else:
+                    # print('nothere')
                 s.add_clause(l)
+        print('here1.5')
 
         # print(time() - ts)
 
@@ -184,13 +187,14 @@ class Heesch(ABC):
         #         # halo are the same
         #         if self.grid.is_overlapping(v1[1], v2[2]):
         #             lst.append(v2[0])
-
+        print('here2')
         with Manager() as manager:
             lst = manager.list()
-            with Pool(processes=cpu_count()) as pool:
+            with Pool(processes=1) as pool:
                 pool.imap_unordered(self.check_halo_overlap_helper, [(i, lst) for i in range(0, self.grid.size[0])])
             for l in lst:
                 s.add_clause(l)
+        print('here3')
 
         self.times[9] = time()
 
@@ -304,7 +308,7 @@ class Heesch(ABC):
                     t = self.get_transform(i)
                     if t is None:
                         break
-                    f.write(f"Transform ID: {i}: \n")
+                    f.write(f"Transform ID: {i} {self.get_transform(i)}: \n")
                     f.write(f'{str(self.transforms[t][1])}\n')
             else:
                 f.write('\tNo Model (Unsolvable)')
@@ -319,11 +323,15 @@ class Heesch(ABC):
         i1, lst = args
         for (k1, v1), (k2, v2) in itertools.combinations(self.transforms.items(), 2):
             if k1[1] != i1 and k2[1] != i1:
+                print('continued 1')
                 continue
 
             # seems to not change speed at k=0,1?
             if max(abs(v1[1][0][0] - v2[1][0][0]), abs(v1[1][0][1] - v2[1][0][1])) > 2 * self.shape_rad:
+                print('continued 2')
                 continue
+
+            print('not continued')
 
             # checks if any two rows in the transform are the same
             if self.grid.is_overlapping(v1[1], v2[1]):
@@ -339,8 +347,6 @@ class Heesch(ABC):
 
             l = [-v1[0]]
             for k2, v2 in self.transforms.items():
-                if v1[0] >= v2[0]:
-                    continue
 
                 # only consider the k and k-1 coronas
                 if k1[0] != k2[0] + 1:

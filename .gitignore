@@ -8,3 +8,4 @@ build/
 env/
 *.ipynb_checkpoints
 tests/out
+tests/tmp.py
