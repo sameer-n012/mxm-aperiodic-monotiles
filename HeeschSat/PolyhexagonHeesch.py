@@ -23,6 +23,7 @@ class PolyhexagonHeesch(Heesch):
         self.k_cor = coronas
         self.shape = shape
         self.shape_size = self.shape.shape
+        self.shape_rad = max(self.shape_size[0], self.shape_size[1])
 
     def plot(self, show=True, write=False, filename=None, directory=None):
         if self.model is None:
@@ -43,9 +44,8 @@ class PolyhexagonHeesch(Heesch):
         ax.set_aspect("equal")
 
         i_s = self.grid.indices()
-        i_ts = np.matmul(self.grid.basis, i_s.T).T
+        i_ts = self.grid.apply_basis(i_s).T
         for i, i_t in enumerate(i_ts):
-
             hexagon = RegularPolygon(
                 (i_t[0], i_t[1]),
                 numVertices=6,
@@ -60,11 +60,13 @@ class PolyhexagonHeesch(Heesch):
             ax.text(i_t[0], i_t[1], f'{i_s[i][0]}, {i_s[i][1]}',
                     verticalalignment='center',
                     horizontalalignment='center',
-                    clip_on=True
-            )
+                    clip_on=True,
+                    fontsize=80 / self.grid.size[0]
+                    )
 
         for i, s in enumerate(shapes):
-            s_t = np.matmul(self.grid.basis, s.T).T
+            s_t = self.grid.apply_basis(s).T
+            # s_t = np.matmul(self.grid.basis, s.T).T
 
             for j, c in enumerate(s_t):
                 # alpha is transparency
@@ -74,7 +76,7 @@ class PolyhexagonHeesch(Heesch):
                     radius=np.sqrt(1 / 3),
                     # orientation=np.pi / 6,
                     alpha=0.5,
-                    facecolor=Heesch.plot_colors[i%len(Heesch.plot_colors)],
+                    facecolor=Heesch.plot_colors[i % len(Heesch.plot_colors)],
                     edgecolor="k",
                 )
                 ax.add_patch(hexagon)
@@ -82,13 +84,17 @@ class PolyhexagonHeesch(Heesch):
         plt.autoscale(enable=True)
         if write and filename is not None:
             if directory is not None:
-                plt.savefig(directory + '/' + filename + '.png')
+                plt.savefig(directory + '/' + filename + '.png',
+                            bbox_inches='tight',
+                            dpi=100*self.grid.size[0]
+                            )
             else:
-                plt.savefig(filename + '.png')
+                plt.savefig(filename + '.png',
+                            bbox_inches='tight',
+                            dpi=100*self.grid.size[0]
+                            )
 
         if show:
             plt.show()
 
         return
-
-
