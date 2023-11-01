@@ -3,11 +3,22 @@ import numpy as np
 import itertools
 from pysat.solvers import Solver
 from time import time
+import matplotlib.colors as mcolors
 from multiprocessing import Process, Manager, Pool, cpu_count
 
 
+def define_colors():
+    return sorted(mcolors.CSS4_COLORS,
+                  key=lambda c:
+                  tuple(
+                      mcolors.rgb_to_hsv(mcolors.to_rgb(c))
+                  )), [0, 14, 33, 53, 64, 85, 122, 132]
+
+
 class Heesch(ABC):
-    plot_colors = ['k', 'b', 'r', 'y', 'g', 'c', 'm']
+    # plot_colors = ['k', 'b', 'r', 'y', 'g', 'c', 'm']
+    plot_colors, c_majors = define_colors()
+    c_spacing = 3
 
     def __init__(self, coronas):
         self.k_cor = coronas
@@ -38,7 +49,7 @@ class Heesch(ABC):
         self.transforms[key] = self.get_transform_idx(key), transform, halo
 
         # transform variables (if a transform is used)
-        offset = self.grid.size[0]*self.grid.size[1]*len(self.rotation_matrices)
+        offset = self.grid.size[0] * self.grid.size[1] * len(self.rotation_matrices)
         for idx, val in enumerate(itertools.product(range(1, self.k_cor + 1),
                                                     range(0, self.grid.size[0]),
                                                     range(0, self.grid.size[1]),
@@ -118,15 +129,15 @@ class Heesch(ABC):
 
         self.times[7] = time()
 
-        print(cpu_count())
-        print('here0')
+        # print(cpu_count())
+        # print('here0')
         # with Manager() as manager:
         #     lst = manager.list()
         with Pool(processes=cpu_count()) as pool:
             for lst in pool.imap_unordered(self.check_overlap_mp, range(0, self.grid.size[0])):
                 for l in lst:
                     s.add_clause(l)
-        print('here1.5')
+        # print('here1.5')
 
         # print(time() - ts)
 
@@ -182,7 +193,7 @@ class Heesch(ABC):
         #         # halo are the same
         #         if self.grid.is_overlapping(v1[1], v2[2]):
         #             lst.append(v2[0])
-        print('here2')
+        # print('here2')
         # with Manager() as manager:
         #     lst = manager.list()
         with Pool(processes=cpu_count()) as pool:
@@ -190,7 +201,7 @@ class Heesch(ABC):
                 for l in lst:
                     # print(l)
                     s.add_clause(l)
-        print('here3')
+        # print('here3')
 
         self.times[9] = time()
 
@@ -261,11 +272,11 @@ class Heesch(ABC):
         return v1, v2, v3, idx
 
     def get_transform_idx(self, key):
-        return key[0]*self.grid.size[0]*self.grid.size[1]*len(self.rotation_matrices) + \
-                key[1]*self.grid.size[1]*len(self.rotation_matrices) + \
-                key[2]*len(self.rotation_matrices) + \
-                key[3] + \
-                1
+        return key[0] * self.grid.size[0] * self.grid.size[1] * len(self.rotation_matrices) + \
+               key[1] * self.grid.size[1] * len(self.rotation_matrices) + \
+               key[2] * len(self.rotation_matrices) + \
+               key[3] + \
+               1
 
     def check_overlap_mp(self, i1):
         out = []
@@ -276,7 +287,6 @@ class Heesch(ABC):
             # seems to not change speed at k=0,1?
             if max(abs(v1[1][0][0] - v2[1][0][0]), abs(v1[1][0][1] - v2[1][0][1])) > 2 * self.shape_rad:
                 continue
-
 
             # checks if any two rows in the transform are the same
             if self.grid.is_overlapping(v1[1], v2[1]):
@@ -299,7 +309,7 @@ class Heesch(ABC):
                 if k1[0] != k2[0] + 1:
                     continue
 
-                if max(abs(v1[1][0][0] - v2[1][0][0]), abs(v1[1][0][1] - v2[1][0][1])) > 2 * (self.shape_rad+1):
+                if max(abs(v1[1][0][0] - v2[1][0][0]), abs(v1[1][0][1] - v2[1][0][1])) > 2 * (self.shape_rad + 1):
                     continue
 
                 # checks if any two rows in the transform and second transform's
@@ -359,4 +369,3 @@ class Heesch(ABC):
     @abstractmethod
     def plot(self, show, write, filename, directory):
         pass
-

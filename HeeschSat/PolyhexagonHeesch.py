@@ -42,58 +42,79 @@ class PolyhexagonHeesch(Heesch):
                 facecolor='w',
                 edgecolor="k",
                 linewidth=0.2,
+                zorder=1.0
             )
             ax.add_patch(hexagon)
             ax.text(i_t[0], i_t[1], f'{i_s[i][0]}, {i_s[i][1]}',
                     verticalalignment='center',
                     horizontalalignment='center',
                     clip_on=True,
-                    fontsize=60 / self.grid.size[0]
+                    fontsize=60 / self.grid.size[0],
+                    zorder=5.0
                     )
 
         shapes = []
         trans = []
+        colors = []
+        c_idx = [0]*len(Heesch.c_majors)
         for i in self.model:
             if i <= 0:
                 continue
             t = self.get_transform(i)
             if t is None:
                 break
+
+            # manage coloring of coronas
+            colors.append(
+                Heesch.plot_colors[
+                    Heesch.c_majors[
+                        (Heesch.c_spacing*t[0]) % len(Heesch.c_majors)
+                    ] + 2*c_idx[Heesch.c_spacing*t[0]]
+                ]
+            )
+            c_idx[Heesch.c_spacing*t[0]] += 1
+
             trans.append(t)
             shapes.append(self.transforms[t][1])
 
         shapes = np.array(shapes)
+
+        # print(colors)
 
         for i, s in enumerate(shapes):
             s_t = self.grid.apply_basis(s).T
             # s_t = np.matmul(self.grid.basis, s.T).T
 
             for j, c in enumerate(s_t):
+
                 # alpha is transparency
-                if trans[i][0] % 2 == 1:
-                    hexagon = RegularPolygon(
-                        (c[0], c[1]),
-                        numVertices=6,
-                        radius=np.sqrt(1 / 3),
-                        # orientation=np.pi / 6,
-                        alpha=0.5,
-                        facecolor=Heesch.plot_colors[i % len(Heesch.plot_colors)],
-                        edgecolor="k",
-                        hatch='///'
-                    )
-                    ax.add_patch(hexagon)
-                else:
-                    hexagon = RegularPolygon(
-                        (c[0], c[1]),
-                        numVertices=6,
-                        radius=np.sqrt(1 / 3),
-                        # orientation=np.pi / 6,
-                        alpha=0.5,
-                        facecolor=Heesch.plot_colors[i % len(Heesch.plot_colors)],
-                        edgecolor="k",
-                    )
-                    ax.add_patch(hexagon)
-                # ax.text(c[0], c[1], f'{s[j][0]}, {s[j][1]}', verticalalignment='center', '')
+                # if trans[i][0] % 2 == 1:
+                hexagon = RegularPolygon(
+                    (c[0], c[1]),
+                    numVertices=6,
+                    radius=np.sqrt(1 / 3),
+                    # orientation=np.pi / 6,
+                    alpha=0.5,
+                    facecolor=colors[i],
+                    edgecolor="k",
+                    # linestyle='',
+                    # linewidth=0,
+                    hatch='///' if trans[i][0] % 2 == 1 else '',
+                    zorder=2.0
+                )
+                ax.add_patch(hexagon)
+                # else:
+                #     hexagon = RegularPolygon(
+                #         (c[0], c[1]),
+                #         numVertices=6,
+                #         radius=np.sqrt(1 / 3),
+                #         # orientation=np.pi / 6,
+                #         alpha=0.5,
+                #         facecolor=colors[i],
+                #         edgecolor="k",
+                #     )
+                #     ax.add_patch(hexagon)
+
         plt.autoscale(enable=True)
         if write and filename is not None:
             if directory is not None:
