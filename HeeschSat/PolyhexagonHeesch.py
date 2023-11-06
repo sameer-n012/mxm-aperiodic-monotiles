@@ -30,9 +30,17 @@ class PolyhexagonHeesch(Heesch):
         fig, ax = plt.subplots(1)
         ax.set_aspect("equal")
 
-        i_s = self.grid.indices()
+        bounds_t = self.grid.apply_basis(np.array([list(self.grid.size)])).reshape(1, 2)[0]
+
+        i_s = np.array([(i, j) for j in range(-self.grid.size[1], 2*self.grid.size[1])
+                        for i in range(-self.grid.size[0], 2*self.grid.size[0])])
         i_ts = self.grid.apply_basis(i_s).T
         for i, i_t in enumerate(i_ts):
+            if i_t[0] < 0*bounds_t[0] or i_t[1] < 0*bounds_t[0] or \
+                    i_t[0] > 1*bounds_t[0] or i_t[1] > 1*bounds_t[1]:
+                continue
+
+            # grid hexagons
             hexagon = RegularPolygon(
                 (i_t[0], i_t[1]),
                 numVertices=6,
@@ -41,10 +49,13 @@ class PolyhexagonHeesch(Heesch):
                 alpha=1.0,
                 facecolor='w',
                 edgecolor="k",
+                # linewidth=None,
                 linewidth=0.2,
                 zorder=1.0
             )
             ax.add_patch(hexagon)
+
+            # grid coords
             ax.text(i_t[0], i_t[1], f'{i_s[i][0]}, {i_s[i][1]}',
                     verticalalignment='center',
                     horizontalalignment='center',
@@ -67,12 +78,13 @@ class PolyhexagonHeesch(Heesch):
             # manage coloring of coronas
             colors.append(
                 Heesch.plot_colors[
-                    Heesch.c_majors[
+                    (Heesch.c_majors[
                         (Heesch.c_spacing*t[0]) % len(Heesch.c_majors)
-                    ] + 2*c_idx[Heesch.c_spacing*t[0]]
+                    ] + 2*c_idx[(Heesch.c_spacing*t[0]) % len(c_idx)])
+                    % len(Heesch.plot_colors)
                 ]
             )
-            c_idx[Heesch.c_spacing*t[0]] += 1
+            c_idx[(Heesch.c_spacing*t[0]) % len(c_idx)] += 1
 
             trans.append(t)
             shapes.append(self.transforms[t][1])
@@ -87,6 +99,7 @@ class PolyhexagonHeesch(Heesch):
 
             for j, c in enumerate(s_t):
 
+                # shape hexagons (filled, colored)
                 # alpha is transparency
                 # if trans[i][0] % 2 == 1:
                 hexagon = RegularPolygon(
@@ -98,7 +111,7 @@ class PolyhexagonHeesch(Heesch):
                     facecolor=colors[i],
                     edgecolor="k",
                     # linestyle='',
-                    # linewidth=0,
+                    linewidth=None,
                     hatch='///' if trans[i][0] % 2 == 1 else '',
                     zorder=2.0
                 )
@@ -115,7 +128,11 @@ class PolyhexagonHeesch(Heesch):
                 #     )
                 #     ax.add_patch(hexagon)
 
+        ax.axis("off")
+        # ax.set_xlim(-1, bounds_t[0]+1)
+        # ax.set_ylim(-1, bounds_t[1]+1)
         plt.autoscale(enable=True)
+
         if write and filename is not None:
             if directory is not None:
                 plt.savefig(directory + '/' + filename + '.png',

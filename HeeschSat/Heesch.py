@@ -8,11 +8,14 @@ from multiprocessing import Process, Manager, Pool, cpu_count
 
 
 def define_colors():
-    return sorted(mcolors.CSS4_COLORS,
+    lst = sorted(mcolors.CSS4_COLORS,
                   key=lambda c:
                   tuple(
                       mcolors.rgb_to_hsv(mcolors.to_rgb(c))
-                  )), [0, 14, 33, 53, 64, 85, 122, 132]
+                  ))
+    lst.remove('black')
+    return lst, [0, 14, 33, 53, 64, 85, 122, 132]
+
 
 
 class Heesch(ABC):
@@ -37,12 +40,14 @@ class Heesch(ABC):
 
         self.times[0] = time()
 
+        mid = int(self.grid.size[0] / 2), int(self.grid.size[0] / 2)
+
         max_transforms = (self.k_cor + 1) * self.grid.size[0] * self.grid.size[1] * len(self.rotation_matrices)
 
         # include single 0-corona transform as original shape
         translate_mat = np.empty(self.shape_size, dtype=int)
-        translate_mat[:, 0] = int(self.grid.size[0] / 2)
-        translate_mat[:, 1] = int(self.grid.size[1] / 2)
+        translate_mat[:, 0] = mid[0]
+        translate_mat[:, 1] = mid[1]
         transform = self.shape + translate_mat
         halo = np.unique([i for c in transform for i in self.grid.haloIdx(c)], axis=0)
         key = (0, int(self.grid.size[0] / 2), int(self.grid.size[1] / 2), 0)
@@ -63,6 +68,11 @@ class Heesch(ABC):
             translate_mat[:, 1] = val[2]
             rotate_mat = self.rotation_matrices[val[3]]
             transform = np.matmul(rotate_mat, self.shape.T).T + translate_mat
+
+            if max(abs(val[1] - mid[0]), abs(val[2] - mid[1])) > (val[0] + 1) * (self.shape_rad + 1):
+                continue
+            # if min(abs(val[1] - mid[0]), abs(val[2] - mid[1])) < (val[0]):
+            #     continue
 
             # only include transforms that fall within the bounds of the grid
             if self.grid.in_bounds(transform):
@@ -224,15 +234,15 @@ class Heesch(ABC):
         # # TODO - add hole suppression
         # # not sure why we can't just have a and b and c and d => e
         # # where a, b, c, d, are the tiles adjacent to e
-        # for k, v in self.cells.items():
-        #     lst = []
-        #
-        #     # find all adjacent cells
-        #     for c in self.grid.haloIdx(k):
-        #         lst.append(-self.cells[tuple(c)])
-        #
-        #     lst.append(v)
-        #     s.add_clause(lst)
+        for k, v in self.cells.items():
+            lst = []
+
+            # find all adjacent cells
+            for c in self.grid.haloIdx(k):
+                lst.append(-self.cells[tuple(c)])
+
+            lst.append(v)
+            s.add_clause(lst)
 
         self.times[11] = time()
 
@@ -256,7 +266,7 @@ class Heesch(ABC):
         self.sat = None
         self.model = None
 
-    def get_transform(self, idx):
+    def get_transform(self, idx: int):
 
         idx -= 1
         if idx >= (self.k_cor + 1) * self.grid.size[0] * self.grid.size[1] * len(self.rotation_matrices):
@@ -271,14 +281,14 @@ class Heesch(ABC):
 
         return v1, v2, v3, idx
 
-    def get_transform_idx(self, key):
+    def get_transform_idx(self, key: tuple[int, int, int, int]):
         return key[0] * self.grid.size[0] * self.grid.size[1] * len(self.rotation_matrices) + \
                key[1] * self.grid.size[1] * len(self.rotation_matrices) + \
                key[2] * len(self.rotation_matrices) + \
                key[3] + \
                1
 
-    def check_overlap_mp(self, i1):
+    def check_overlap_mp(self, i1: int):
         out = []
         for (k1, v1), (k2, v2) in itertools.combinations(self.transforms.items(), 2):
             if k1[1] != i1 and k2[1] != i1:
@@ -294,7 +304,7 @@ class Heesch(ABC):
 
         return out
 
-    def check_halo_overlap_mp(self, i1):
+    def check_halo_overlap_mp(self, i1: int):
         out = []
         for k1, v1 in self.transforms.items():
             if k1[1] != i1:
