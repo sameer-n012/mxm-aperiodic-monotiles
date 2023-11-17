@@ -1,3 +1,4 @@
+import numpy
 import numpy as np
 
 from HeeschSat.Grid import Grid
@@ -49,3 +50,22 @@ class KiteGrid(Grid):
                     ((x[0] == y[0] and (y[2] == 1 or y[2] == 2)) or
                      (x[0] + 1 == y[0] and (y[2] == 2 or y[2] == 3)))
                 )
+
+    @staticmethod
+    def _rotate_once(tile: list):
+        rot_mat = np.array([[0, -1],
+                            [1, 1]])
+        # transformation will be an array of each original kite rotated once.
+        transformation = []
+        for kite in tile:
+            # multiply first two coords by rotation matrix
+            new_kite = np.dot(rot_mat, kite[:2])
+            # handles 3rd coordinate
+            new_kite.append((kite[2] + 1) % 6)
+            transformation.append(new_kite)
+
+        return transformation
+
+    @staticmethod
+    def _reflect(tile: list):
+        pass
