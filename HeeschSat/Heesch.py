@@ -9,22 +9,22 @@ from multiprocessing import Process, Manager, Pool, cpu_count
 
 def define_colors():
     lst = sorted(mcolors.CSS4_COLORS,
-                  key=lambda c:
-                  tuple(
-                      mcolors.rgb_to_hsv(mcolors.to_rgb(c))
-                  ))
+                 key=lambda c:
+                 tuple(
+                     mcolors.rgb_to_hsv(mcolors.to_rgb(c))
+                 ))
     lst.remove('black')
     return lst, [0, 14, 33, 53, 64, 85, 122, 132]
-
 
 
 class Heesch(ABC):
     # plot_colors = ['k', 'b', 'r', 'y', 'g', 'c', 'm']
     plot_colors, c_majors = define_colors()
     c_spacing = 3
+    num_timestamps = 14
 
-    def __init__(self, coronas):
-        self.k_cor = coronas
+    def __init__(self):
+        self.k_cor = None
         self.grid = None
         self.transforms = {}
         self.cells = {}
@@ -34,13 +34,14 @@ class Heesch(ABC):
         self.shape_rad = None
         self.sat = None
         self.model = None
-        self.times = [0.0] * 14
+        self.num_clauses = 0
+        self.times = [0.0] * Heesch.num_timestamps
 
     def generate_variables(self):
 
         self.times[0] = time()
 
-        mid = int(self.grid.size[0] / 2), int(self.grid.size[0] / 2)
+        mid = int(self.grid.size[0] / 2), int(self.grid.size[1] / 2)
 
         max_transforms = (self.k_cor + 1) * self.grid.size[0] * self.grid.size[1] * len(self.rotation_matrices)
 
@@ -50,8 +51,11 @@ class Heesch(ABC):
         translate_mat[:, 1] = mid[1]
         transform = self.shape + translate_mat
         halo = np.unique([i for c in transform for i in self.grid.haloIdx(c)], axis=0)
-        key = (0, int(self.grid.size[0] / 2), int(self.grid.size[1] / 2), 0)
+        key = (0, mid[0], mid[1], 0)
         self.transforms[key] = self.get_transform_idx(key), transform, halo
+
+        # get the used rotation matrices (some might result in rotational symmetry)
+        rotate_indices = self.check_rotational_symmetry()
 
         # transform variables (if a transform is used)
         offset = self.grid.size[0] * self.grid.size[1] * len(self.rotation_matrices)
@@ -63,16 +67,19 @@ class Heesch(ABC):
             if val[0] == 0:
                 continue
 
+            if rotate_indices[val[3]] == 0:
+                continue
+
             translate_mat = np.empty(self.shape_size, dtype=int)
             translate_mat[:, 0] = val[1]
             translate_mat[:, 1] = val[2]
             rotate_mat = self.rotation_matrices[val[3]]
             transform = np.matmul(rotate_mat, self.shape.T).T + translate_mat
 
-            if max(abs(val[1] - mid[0]), abs(val[2] - mid[1])) > (val[0] + 1) * (self.shape_rad + 1):
+            if max(abs(val[1] - mid[0]), abs(val[2] - mid[1])) > (val[0] + 1) * (self.shape_rad + 0):
                 continue
-            # if min(abs(val[1] - mid[0]), abs(val[2] - mid[1])) < (val[0]):
-            #     continue
+            if max(abs(val[1] - mid[0]), abs(val[2] - mid[1])) < (val[0] - 1):
+                continue
 
             # only include transforms that fall within the bounds of the grid
             if self.grid.in_bounds(transform):
@@ -100,6 +107,7 @@ class Heesch(ABC):
         # 0-corona always used
         k_0 = self.transforms[(0, int(self.grid.size[0] / 2), int(self.grid.size[1] / 2), 0)]
         s.add_clause([k_0[0]])
+        self.num_clauses += 1
 
         self.times[4] = time()
 
@@ -109,6 +117,7 @@ class Heesch(ABC):
             # ad each cell in the transform
             for c in v[1]:
                 s.add_clause([-v[0], self.cells[tuple(c)]])
+                self.num_clauses += 1
 
         self.times[5] = time()
 
@@ -122,6 +131,7 @@ class Heesch(ABC):
                 if list(k1) in v2[1].tolist():
                     lst.append(v2[0])
             s.add_clause(lst)
+            self.num_clauses += 1
 
         self.times[6] = time()
 
@@ -136,6 +146,7 @@ class Heesch(ABC):
             # consider all cells in halo of transform
             for c in v[2]:
                 s.add_clause([-v[0], self.cells[tuple(c)]])
+                self.num_clauses += 1
 
         self.times[7] = time()
 
@@ -147,6 +158,7 @@ class Heesch(ABC):
             for lst in pool.imap_unordered(self.check_overlap_mp, range(0, self.grid.size[0])):
                 for l in lst:
                     s.add_clause(l)
+                    self.num_clauses += 1
         # print('here1.5')
 
         # print(time() - ts)
@@ -211,6 +223,7 @@ class Heesch(ABC):
                 for l in lst:
                     # print(l)
                     s.add_clause(l)
+                    self.num_clauses += 1
         # print('here3')
 
         self.times[9] = time()
@@ -228,6 +241,7 @@ class Heesch(ABC):
                 # halo are the same
                 if self.grid.is_overlapping(v1[1], v2[2]):
                     s.add_clause([-v1[0], -v2[0]])
+                    self.num_clauses += 1
 
         self.times[10] = time()
         #
@@ -243,6 +257,7 @@ class Heesch(ABC):
 
             lst.append(v)
             s.add_clause(lst)
+            self.num_clauses += 1
 
         self.times[11] = time()
 
@@ -332,7 +347,24 @@ class Heesch(ABC):
 
         return out
 
-    def write(self, directory='.'):
+    def check_rotational_symmetry(self):
+
+        seen = []
+        out = [1] * len(self.rotation_matrices)
+
+        for idx, rm in enumerate(self.rotation_matrices):
+            t = set(map(tuple, np.matmul(rm, self.shape.T).T))
+            if t in seen:
+                out[idx] = 0
+            else:
+                seen.append(t)
+
+        return out
+
+
+
+
+    def write(self, directory='.', plot=True):
         filename = str(int(time()))
 
         with open(directory + '/' + filename + '.txt', 'w+') as f:
@@ -342,11 +374,13 @@ class Heesch(ABC):
             f.write(f'Grid Size: {self.grid.size}\n')
             f.write(f'Coronas: {self.k_cor}\n')
             f.write(f'Shape Size: {self.shape_size}\n')
+            f.write(f'Shape Radius: {self.shape_rad}\n')
             f.write(f'Shape: \n')
             f.write(f'{str(self.shape)}\n')
 
             f.write('--------------------------------------------------\n')
 
+            f.write(f'Total Clauses: {self.num_clauses}\n')
             f.write(f'SAT Model: \n')
             if self.model is not None:
                 f.write(f'\t{str(self.model)}\n')
@@ -374,7 +408,8 @@ class Heesch(ABC):
             else:
                 f.write('\tNo Model (Unsolvable)')
 
-        self.plot(show=False, write=True, filename=filename, directory=directory)
+        if plot:
+            self.plot(show=False, write=True, filename=filename, directory=directory)
 
     @abstractmethod
     def plot(self, show, write, filename, directory):

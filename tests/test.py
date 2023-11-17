@@ -5,6 +5,10 @@ if __name__ == '__main__':
 
     print('Test Starting...')
 
+    t0 = np.array([
+        [0, 0],
+    ])
+
     t1 = np.array([
         [0, 0],
         [0, 1],
@@ -25,16 +29,21 @@ if __name__ == '__main__':
         [-1, 2]
     ])
 
-    ph = PolyhexagonHeesch(t1, 2, (12, 12))
+    ph = PolyhexagonHeesch(t1, coronas=3)
     ph.generate_variables()
     ph.construct_sat()
     ph.solve_sat()
-    ph.write(directory='tests/out')
+    ph.write(directory='tests/out', plot=True)
 
+    # Count transforms in each corona
     print(len(ph.transforms))
-    count = [0]*5
+    count = [0]*(ph.k_cor+1)
     for key in ph.transforms.keys():
         count[key[0]] += 1
+        # if key[0] == 1 and (key[1] > 7 or key[2] > 7):
+        #     print(key)
+        #     print(ph.transforms[key])
+        #     break
     print('counts: ', count)
 
     exit()

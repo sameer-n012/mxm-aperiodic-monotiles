@@ -7,9 +7,8 @@ from matplotlib.patches import RegularPolygon
 
 class PolyhexagonHeesch(Heesch):
 
-    def __init__(self, shape, coronas, grid_size):
-        super().__init__(coronas)
-        self.grid = HexGrid(grid_size)
+    def __init__(self, shape, coronas=0, grid_size=None):
+        super().__init__()
         self.rotation_matrices = [np.matmul(np.linalg.matrix_power(
             np.array([[1, 1],
                       [0, -1]]), j),
@@ -21,7 +20,11 @@ class PolyhexagonHeesch(Heesch):
         self.k_cor = coronas
         self.shape = shape
         self.shape_size = self.shape.shape
-        self.shape_rad = max(self.shape_size[0], self.shape_size[1])
+        self.shape_rad = np.max(np.ptp(self.shape, axis=0)) + 1
+        if grid_size is None:
+            grid_size = int(2 * self.shape_rad * (self.k_cor + 1))
+            grid_size = (grid_size, grid_size)
+        self.grid = HexGrid(grid_size)
 
     def plot(self, show=True, write=False, filename=None, directory=None):
         if self.model is None:
@@ -93,6 +96,7 @@ class PolyhexagonHeesch(Heesch):
 
         # print(colors)
 
+        # shape hexagons
         for i, s in enumerate(shapes):
             s_t = self.grid.apply_basis(s).T
             # s_t = np.matmul(self.grid.basis, s.T).T
@@ -112,7 +116,7 @@ class PolyhexagonHeesch(Heesch):
                     # facecolor=colors[i],
                     # edgecolor="k",
                     # linestyle='',
-                    linewidth=None,
+                    linewidth=1/self.grid.size[0],
                     hatch='///' if trans[i][0] % 2 == 1 else '',
                     zorder=2.0
                 )
