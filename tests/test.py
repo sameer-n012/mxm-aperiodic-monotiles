@@ -29,7 +29,7 @@ if __name__ == '__main__':
         [-1, 2]
     ])
 
-    ph = PolyhexagonHeesch(t1, coronas=3)
+    ph = PolyhexagonHeesch(t1, coronas=1)
     ph.generate_variables()
     ph.construct_sat()
     ph.solve_sat()

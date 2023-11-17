@@ -361,9 +361,6 @@ class Heesch(ABC):
 
         return out
 
-
-
-
     def write(self, directory='.', plot=True):
         filename = str(int(time()))
 
