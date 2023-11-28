@@ -24,6 +24,13 @@ class Heesch(ABC):
     num_timestamps = 14
 
     def __init__(self):
+        """
+        Declares the variables used in solving the Heesch problem. The variables
+        self.k_cor, self.shape, self.shape_size, self.shape_rad, self.grid and
+        self.rotation_matrices should be defined in the initializer for the
+        subclasses. Runs in O(1) time.
+        """
+
         self.k_cor = None
         self.grid = None
         self.transforms = {}
@@ -38,6 +45,18 @@ class Heesch(ABC):
         self.times = [0.0] * Heesch.num_timestamps
 
     def generate_variables(self):
+        """
+        Generates the two sets of variables that are used to solve the Heesch
+        problem. These are the transformation variables (one variable for each
+        unique possible tranformation in each corona) and the cell variables
+        (one variable for each cell in the grid). The 0-corona only contains a
+        single transformation in the center of the grid. All other coronas
+        contain transformations that are bounded by the shape radius and the
+        corona number. Transformations outside the boundary of the grid are not
+        generated. Runs in O(krm^2n^4) time, where k is the number of coronas, r
+        is the number of rotation/reflection matrices, 2*m is the size of the
+        shape, and n*n is the size of the grid.
+        """
 
         self.times[0] = time()
 
@@ -46,44 +65,59 @@ class Heesch(ABC):
         max_transforms = (self.k_cor + 1) * self.grid.size[0] * self.grid.size[1] * len(self.rotation_matrices)
 
         # include single 0-corona transform as original shape
-        translate_mat = np.empty(self.shape_size, dtype=int)
-        translate_mat[:, 0] = mid[0]
-        translate_mat[:, 1] = mid[1]
-        transform = self.shape + translate_mat
-        halo = np.unique([i for c in transform for i in self.grid.haloIdx(c)], axis=0)
+        # O(m^2n^2) time
+        translate_mat = np.empty(self.shape_size, dtype=int)  # O(m) time
+        translate_mat[:, 0] = mid[0]  # O(m) time
+        translate_mat[:, 1] = mid[1]  # O(m) time
+        transform = self.shape + translate_mat  # O(m) time
+        halo = np.unique([i for c in transform for i in self.grid.haloIdx(c)], axis=0)  # O(m^2n^2) time
         key = (0, mid[0], mid[1], 0)
         self.transforms[key] = self.get_transform_idx(key), transform, halo
 
         # get the used rotation matrices (some might result in rotational symmetry)
+        # O(rm) time
         rotate_indices = self.check_rotational_symmetry()
 
         # transform variables (if a transform is used)
+        # O(kn^4rm^2) time
         offset = self.grid.size[0] * self.grid.size[1] * len(self.rotation_matrices)
         for idx, val in enumerate(itertools.product(range(1, self.k_cor + 1),
                                                     range(0, self.grid.size[0]),
                                                     range(0, self.grid.size[1]),
                                                     range(0, len(self.rotation_matrices))
                                                     )):
+
+            # do not generate any 0-corona transforms
             if val[0] == 0:
                 continue
 
+            # do not generate any rotation transforms where rotation is
+            # symmetric to another rotation that was previously generated
             if rotate_indices[val[3]] == 0:
                 continue
 
-            translate_mat = np.empty(self.shape_size, dtype=int)
-            translate_mat[:, 0] = val[1]
-            translate_mat[:, 1] = val[2]
+            # build the transform by translating and rotating it
+            # O(m) time
+            translate_mat = np.empty(self.shape_size, dtype=int)  # O(m) time
+            translate_mat[:, 0] = val[1]  # O(m) time
+            translate_mat[:, 1] = val[2]  # O(m) time
             rotate_mat = self.rotation_matrices[val[3]]
-            transform = np.matmul(rotate_mat, self.shape.T).T + translate_mat
+            transform = np.matmul(rotate_mat, self.shape.T).T + translate_mat  # O(m) time
 
+            # ignore any transforms that are more than k_cor*shape_radius from the center
+            # O(m) time
             if max(abs(val[1] - mid[0]), abs(val[2] - mid[1])) > (val[0] + 1) * (self.shape_rad + 0):
                 continue
+
+            # ignore any transforms that are less than k_cor from the center
+            # O(m) time
             if max(abs(val[1] - mid[0]), abs(val[2] - mid[1])) < (val[0] - 1):
                 continue
 
             # only include transforms that fall within the bounds of the grid
-            if self.grid.in_bounds(transform):
-                halo = np.unique([i for c in transform for i in self.grid.haloIdx(c)], axis=0)
+            # O(m^2n^2) time
+            if self.grid.in_bounds(transform):  # O(m)
+                halo = np.unique([i for c in transform for i in self.grid.haloIdx(c)], axis=0)  # O(m^2n^2)
                 self.transforms[tuple(val)] = idx + offset + 1, transform, halo
 
         self.times[1] = time()
@@ -97,14 +131,23 @@ class Heesch(ABC):
 
     def construct_sat(self) -> Solver:
         """
-        Note that a, b => c | d === -a | -b | c | d
+        Constructs the clauses of the boolean satisfiability expression and
+        adds it to the SAT solver, self.sat. Generates the clauses as specified
+        in the paper "Heesch Numbers of Unmarked Polyforms" by C. Kaplan. Uses
+        a 'g3' solver in the library PySAT. Uses multiprocessing to generate
+        certain types of clauses. Runs in O(mt^2) time, where t is the number of
+        transformations and 2*m is the size of the shape. Note that t is bounded
+        above by krn^2, so time complexity is equivalently O(k^2r^2mn^4).
         """
+
+        # Note that a & b => c | d === -a | -b | c | d
 
         s = Solver(name="g3")
 
         self.times[3] = time()
 
         # 0-corona always used
+        # O(1) time
         k_0 = self.transforms[(0, int(self.grid.size[0] / 2), int(self.grid.size[1] / 2), 0)]
         s.add_clause([k_0[0]])
         self.num_clauses += 1
@@ -112,9 +155,11 @@ class Heesch(ABC):
         self.times[4] = time()
 
         # if a transform is used, its cells are used
+        # O(mt) time
         for k, v in self.transforms.items():
 
-            # ad each cell in the transform
+            # add each cell in the transform
+            # O(m) time
             for c in v[1]:
                 s.add_clause([-v[0], self.cells[tuple(c)]])
                 self.num_clauses += 1
@@ -122,11 +167,13 @@ class Heesch(ABC):
         self.times[5] = time()
 
         # if a cell is used, some transform must use it
+        # O(mn^2t) time
         for k1, v1 in self.cells.items():
             lst = [-v1]
 
             # check if the cell is in the transform for
             # each transform
+            # O(tm) time
             for k2, v2 in self.transforms.items():
                 if list(k1) in v2[1].tolist():
                     lst.append(v2[0])
@@ -137,6 +184,7 @@ class Heesch(ABC):
 
         # if a transform is used in an interior corona, its halo cells must
         # be used
+        # O(mt) time
         for k, v in self.transforms.items():
 
             # do not consider nth corona
@@ -144,92 +192,41 @@ class Heesch(ABC):
                 continue
 
             # consider all cells in halo of transform
+            # O(m) time
             for c in v[2]:
                 s.add_clause([-v[0], self.cells[tuple(c)]])
                 self.num_clauses += 1
 
         self.times[7] = time()
 
-        # print(cpu_count())
-        # print('here0')
-        # with Manager() as manager:
-        #     lst = manager.list()
+        # used transforms cannot overlap
+        # O(mt^2/n) time
         with Pool(processes=cpu_count()) as pool:
+            # takes O(mt^2/n) for each process
+            # adding clause from list does not change time complexity
             for lst in pool.imap_unordered(self.check_overlap_mp, range(0, self.grid.size[0])):
                 for l in lst:
                     s.add_clause(l)
                     self.num_clauses += 1
-        # print('here1.5')
-
-        # print(time() - ts)
-
-        # TODO - optimize (takes a long time ~2000s for k=2)
-        #  probably caused by the is_overlapping method
-        # used transforms cannot overlap
-        # for k1, v1 in self.transforms.items():
-        #     for k2, v2 in self.transforms.items():
-        #
-        #         # only consider pairings where idx1 < idx2 so unnecessary
-        #         # clauses are not generated
-        #         if v1[0] >= v2[0]:
-        #             continue
-        #
-        #         # checks if any two rows in the transform are the same
-        #         if self.grid.is_overlapping(v1[1], v2[1]):
-        #             s.add_clause([-v1[0], -v2[0]])
-
-        # same speed as above
-        # for (k1, v1), (k2, v2) in itertools.combinations(self.transforms.items(), 2):
-        #     # if np.max(np.abs(v1[1][0] - v2[1][0])) > 2*self.shape_rad:
-        #     # continue
-        #
-        #     # seems to not change speed at k=0,1?
-        #     if max(abs(v1[1][0][0] - v2[1][0][0]), abs(v1[1][0][1] - v2[1][0][1])) > 2 * self.shape_rad:
-        #         continue
-        #
-        #     # checks if any two rows in the transform are the same
-        #     if self.grid.is_overlapping(v1[1], v2[1]):
-        #         s.add_clause([-v1[0], -v2[0]])
 
         self.times[8] = time()
 
-        # TODO - optimize (takes a long time ~30s for k=2)
-        #  probably caused by the is_overlapping method
         # if a transform is used in a k corona, it must be adjacent to one
         # in a k-1 corona
-        # for k1, v1 in self.transforms.items():
-        #     if k1[0] == 0:
-        #         continue
-        #
-        #     lst = [-v1[0]]
-        #     for k2, v2 in self.transforms.items():
-        #
-        #         # only consider the k and k-1 coronas
-        #         if k1[0] != k2[0] + 1:
-        #             continue
-        #
-        #         # if np.max(np.abs(v1[1][0] - v2[1][0])) > 2 * (shape_rad + 1):
-        #         #     continue
-        #
-        #         # checks if any two rows in the transform and second transform's
-        #         # halo are the same
-        #         if self.grid.is_overlapping(v1[1], v2[2]):
-        #             lst.append(v2[0])
-        # print('here2')
-        # with Manager() as manager:
-        #     lst = manager.list()
+        # O(mt^2/kn) time
         with Pool(processes=cpu_count()) as pool:
+            # takes O(mt^2/kn) for each process
+            # adding clause from list does not change time complexity
             for lst in pool.imap_unordered(self.check_halo_overlap_mp, range(0, self.grid.size[0])):
                 for l in lst:
-                    # print(l)
                     s.add_clause(l)
                     self.num_clauses += 1
-        # print('here3')
 
         self.times[9] = time()
 
         # if a transform is used in a k corona, it cannot be adjacent to one
         # in a 0...k-2 corona
+        # O(mt^2) time
         for k1, v1 in self.transforms.items():
             for k2, v2 in self.transforms.items():
 
@@ -239,25 +236,25 @@ class Heesch(ABC):
 
                 # checks if any two rows in the transform and second transform's
                 # halo are the same
-                if self.grid.is_overlapping(v1[1], v2[2]):
+                if self.grid.is_overlapping(v1[1], v2[2]):  # O(m)
                     s.add_clause([-v1[0], -v2[0]])
                     self.num_clauses += 1
 
         self.times[10] = time()
-        #
+
         # # TODO - add hole suppression
         # # not sure why we can't just have a and b and c and d => e
         # # where a, b, c, d, are the tiles adjacent to e
-        for k, v in self.cells.items():
-            lst = []
-
-            # find all adjacent cells
-            for c in self.grid.haloIdx(k):
-                lst.append(-self.cells[tuple(c)])
-
-            lst.append(v)
-            s.add_clause(lst)
-            self.num_clauses += 1
+        # for k, v in self.cells.items():
+        #     lst = []
+        #
+        #     # find all adjacent cells
+        #     for c in self.grid.haloIdx(k):
+        #         lst.append(-self.cells[tuple(c)])
+        #
+        #     lst.append(v)
+        #     s.add_clause(lst)
+        #     self.num_clauses += 1
 
         self.times[11] = time()
 
@@ -265,6 +262,14 @@ class Heesch(ABC):
         return self.sat
 
     def solve_sat(self) -> list:
+        """
+        Solves the boolean satisfiability model given by self.sat. Uses the
+        PySAT library. Return the model containing the variable specifications
+        that make the boolean formula true. The integer values in the model
+        correspond to the variable indices given in the self.transforms and
+        self.cells dictionaries. Runs in non-polynomial time.
+        """
+
         self.times[12] = time()
 
         if self.sat.solve():
@@ -282,6 +287,12 @@ class Heesch(ABC):
         self.model = None
 
     def get_transform(self, idx: int):
+        """
+        Returns the transformation corresponding to the given index. The index
+        given should correspond to the index found in the self.transforms
+        dictionary. The key returned is a 4-tuple specified as (corona,
+        x-translate, y-translate, rotation). Runs in O(1) time.
+        """
 
         idx -= 1
         if idx >= (self.k_cor + 1) * self.grid.size[0] * self.grid.size[1] * len(self.rotation_matrices):
@@ -297,6 +308,13 @@ class Heesch(ABC):
         return v1, v2, v3, idx
 
     def get_transform_idx(self, key: tuple[int, int, int, int]):
+        """
+        Returns the index corresponding to the given key. The key should be a
+        4-tuple specified as (corona, x-translate, y-translate, rotation). The
+        index returned corresponds to the index found in the self.transforms
+        dictionary. Runs in O(1) time.
+        """
+
         return key[0] * self.grid.size[0] * self.grid.size[1] * len(self.rotation_matrices) + \
                key[1] * self.grid.size[1] * len(self.rotation_matrices) + \
                key[2] * len(self.rotation_matrices) + \
@@ -304,22 +322,57 @@ class Heesch(ABC):
                1
 
     def check_overlap_mp(self, i1: int):
+        """
+        Checks whether pairs of transforms overlap with each other. Only check
+        pairs where one of the transforms is in the specified first grid index,
+        since other processes will evaluate for other grid indices. Is meant
+        to be used as part of a pool of processes. Returns a list of clauses in
+        the form: [
+            [ x_1, -x_2 ],
+            [ x_3,  x_4 ]
+            ...
+        ] where each x_1, ..., x_4 is a variable. Runs in O(mt^2/n) time, where
+        t is the number of transformations, 2*m is the shape size, and n*n is
+        the size of the grid.
+        """
+
         out = []
+        # O(mt^2/n) time
         for (k1, v1), (k2, v2) in itertools.combinations(self.transforms.items(), 2):
             if k1[1] != i1 and k2[1] != i1:
                 continue
 
-            # seems to not change speed at k=0,1?
+            # TODO test uncommented?
+            # if v1[0] >= v2[0]:
+            #     continue
+
+            # O(m) time
             if max(abs(v1[1][0][0] - v2[1][0][0]), abs(v1[1][0][1] - v2[1][0][1])) > 2 * self.shape_rad:
                 continue
 
             # checks if any two rows in the transform are the same
-            if self.grid.is_overlapping(v1[1], v2[1]):
+            # O(m) time
+            if self.grid.is_overlapping(v1[1], v2[1]):  # O(m) time
                 out.append([-v1[0], -v2[0]])
 
         return out
 
     def check_halo_overlap_mp(self, i1: int):
+        """
+        Checks whether a tranformation and the halo of another transformation
+        overlap, where one transformation is in the specified first grid index,
+        since the other processes will evaluate for other grid indices. Is meant
+        to be used as part of a pool of processes. Returns a list of clauses in
+        the form: [
+            [ x_1, -x_2, ... ],
+            [ x_3,  x_4, ... ]
+            ...
+        ] where each x_1, ..., x_4 is a variable. Runs in O(mt^2/kn) time, where
+        t is the number of transformations, 2*m is the shape size, n*n is
+        the size of the grid, and k is the number of coronas
+        """
+
+        # O(t^2m/kn) time
         out = []
         for k1, v1 in self.transforms.items():
             if k1[1] != i1:
@@ -327,6 +380,8 @@ class Heesch(ABC):
             if k1[0] == 0:
                 continue
 
+            # iterate through the other transforms
+            # O(tm/k) time
             l = [-v1[0]]
             for k2, v2 in self.transforms.items():
 
@@ -334,12 +389,15 @@ class Heesch(ABC):
                 if k1[0] != k2[0] + 1:
                     continue
 
+                # Do not consider to be overlapping if more than 2*shape_radius away from each other
+                # O(m) time
                 if max(abs(v1[1][0][0] - v2[1][0][0]), abs(v1[1][0][1] - v2[1][0][1])) > 2 * (self.shape_rad + 1):
                     continue
 
                 # checks if any two rows in the transform and second transform's
                 # halo are the same
-                if self.grid.is_overlapping(v1[1], v2[2]):
+                # O(m) time
+                if self.grid.is_overlapping(v1[1], v2[2]):  # O(m) time
                     l.append(v2[0])
 
             if len(l) > 0:
@@ -348,6 +406,15 @@ class Heesch(ABC):
         return out
 
     def check_rotational_symmetry(self):
+        """
+        Checks whether any rotational transformations to the given shape result
+        in duplicate shapes. Returns a list with 0's in the indices of
+        rotational transforms that contain duplicates and 1's in the indices of
+        rotational transforms that are not duplicates. The indices correspond
+        to the indices of self.rotation_matrices. Runs in O(rm) time where
+        r is the number of rotation/reflection matrices and m*2 is the size
+        of the shape.
+        """
 
         seen = []
         out = [1] * len(self.rotation_matrices)
@@ -362,6 +429,16 @@ class Heesch(ABC):
         return out
 
     def write(self, directory='.', plot=True):
+        """
+        Writes the output of the Heesch problem to a file. The filename is
+        given by the time of writing. The directory parameter specifies the
+        location the file should be written to, by default the current
+        directory. The plot argument specifies whether to create a
+        matplotlib figure of the corresponding tiling that solves the Heesch
+        problem. Plotting requires the abstract function plot be implemented
+        in a subclass.
+        """
+
         filename = str(int(time()))
 
         with open(directory + '/' + filename + '.txt', 'w+') as f:

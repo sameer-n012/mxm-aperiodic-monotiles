@@ -12,27 +12,17 @@ class Grid(ABC):
         as such: [
             [ u_1, u_1 ],
             [ v_2, v_2 ]
-        ] where each row is a basis vector
+        ] where each row is a basis vector. Runs in O(1) time.
 
         """
+
         self.basis = np.array([1, 0], [0, 1]) if basis is None else basis.T
         self.size = size
-        self.grid = np.full(self.size, False)  # TODO - delete unused
 
     @staticmethod
     @abstractmethod
     def is_adjacent(x: Union[tuple, list, np.array], y: Union[tuple, list, np.array]):
         pass
-
-    # TODO - delete unused
-    def halo(self, cell: tuple[int]) -> np.array:
-        """
-        Returns the cells that are adjacent to the current cell based on the
-        adjacency function the grid was created with. The cells returned will
-        not be in any particular order.
-        """
-
-        return np.array([self.grid[tuple(x)] for x in np.transpose(np.nonzero(self.haloIdx(cell)))])
 
     def haloIdx(self, cell: tuple[int]) -> np.ndarray:
         """
@@ -44,7 +34,8 @@ class Grid(ABC):
             [ x_2, y_2 ],
             ...
             [ x_n, y_n ]
-        ] where each row is a distinct cell
+        ] where each row is a distinct cell. Runs in O(n^2) time for a grid of
+        size n*n.
         """
 
         arr = np.array([self.is_adjacent(i, cell) for i in self.indices()]).reshape(self.size, order='F')
@@ -59,14 +50,16 @@ class Grid(ABC):
             [ x_2, y_2 ],
             ...
             [ x_n, y_n ]
-        ] where each row is a distinct point
-
+        ] where each row is a distinct point. Runs in O(mn^2) time for a grid
+        of size n*n and a coordinate shape of size n*2.
         """
+
         return np.matmul(self.basis, coords.T)
 
     def indices(self) -> np.array:
         """
-        Returns an array of indices on the grid
+        Returns an array of indices on the grid. Runs in O(n^2) time for a grid
+        of size n*n.
         """
 
         return np.array([(i, j) for j in range(self.size[1]) for i in range(self.size[0])])
@@ -75,13 +68,13 @@ class Grid(ABC):
         """
         Checks whether the two matrices, m1 and m2 have any similar rows. Used
         to test if there are overlapping points in two shapes. It is required
-        that the matrices have no duplicate rows to begin withThe matrices
+        that the matrices have no duplicate rows to begin with. The matrices
         should be in the form: [
             [ x_1, y_1 ],
             [ x_2, y_2 ],
             ...
             [ x_n, y_n ]
-        ]
+        ]. Runs in O(m) time for matrices of size m*2.
         """
 
         # stack = np.concatenate((m1, m2), axis=0)
@@ -97,7 +90,8 @@ class Grid(ABC):
             [ x_2, y_2 ],
             ...
             [ x_n, y_n ]
-        ] where each row is a cell the shape occupies
+        ] where each row is a cell the shape occupies. Runs in O(m) time for
+        a shape of size m*2.
         """
 
         return ((shape[:, 0] < self.size[0]).all() and
