@@ -43,6 +43,7 @@ class Heesch(ABC):
         self.model = None
         self.num_clauses = 0
         self.times = [0.0] * Heesch.num_timestamps
+        self.ops = [0] * Heesch.num_timestamps
 
     def generate_variables(self):
         """
@@ -115,10 +116,24 @@ class Heesch(ABC):
                 continue
 
             # only include transforms that fall within the bounds of the grid
+            if not self.grid.in_bounds(transform):
+                continue
+
+            adjacent = False
+            for i2, v2 in enumerate(itertools.product(range(0, self.grid.size[0]),
+                                                        range(0, self.grid.size[1]),
+                                                        range(0, len(self.rotation_matrices))
+                                                        )):
+                if self.transforms[(val[0], v2[0], v2[1], v2[2])] is not None:
+                    if self.grid.is_overlapping(self.transforms[(val[0]-1, v2[0], v2[1], v2[2])][2], transform):
+                        adjacent = True
+
+            if not adjacent:
+                continue
+
             # O(m^2n^2) time
-            if self.grid.in_bounds(transform):  # O(m)
-                halo = np.unique([i for c in transform for i in self.grid.haloIdx(c)], axis=0)  # O(m^2n^2)
-                self.transforms[tuple(val)] = idx + offset + 1, transform, halo
+            halo = np.unique([i for c in transform for i in self.grid.haloIdx(c)], axis=0)  # O(m^2n^2)
+            self.transforms[tuple(val)] = idx + offset + 1, transform, halo
 
         self.times[1] = time()
 
@@ -342,11 +357,10 @@ class Heesch(ABC):
             if k1[1] != i1 and k2[1] != i1:
                 continue
 
-            # TODO test uncommented?
-            # if v1[0] >= v2[0]:
-            #     continue
+            if v1[0] >= v2[0]:
+                continue
 
-            # O(m) time
+            # O(1) time
             if max(abs(v1[1][0][0] - v2[1][0][0]), abs(v1[1][0][1] - v2[1][0][1])) > 2 * self.shape_rad:
                 continue
 
@@ -390,7 +404,7 @@ class Heesch(ABC):
                     continue
 
                 # Do not consider to be overlapping if more than 2*shape_radius away from each other
-                # O(m) time
+                # O(1) time
                 if max(abs(v1[1][0][0] - v2[1][0][0]), abs(v1[1][0][1] - v2[1][0][1])) > 2 * (self.shape_rad + 1):
                     continue
 
@@ -463,13 +477,15 @@ class Heesch(ABC):
             f.write('Times: \n')
             sum_time = 0.0
             for i, t in enumerate(self.times):
-                f.write(f'\tTimestamp {i:02d}: {t - sum_time - self.times[0]}\n')
+                f.write(f'\tTimestamp {i:02d}: {t - sum_time - self.times[0]}s '
+                        f'({self.ops[i] - self.ops[i-1] if i != 0 else 0} ops)\n')
                 sum_time = t - self.times[0]
-            f.write(f'Total Time: {sum_time}\n')
+            f.write(f'Total Time: {sum_time}s ({self.ops[-1]} ops)\n')
 
             f.write('--------------------------------------------------\n')
 
-            f.write('Transforms: \n')
+            num_transforms = len([i for i in self.model if i > 0 and self.get_transform(i) is not None])
+            f.write(f'Transforms ({num_transforms}): \n')
             if self.model is not None:
                 for i in self.model:
                     if i <= 0:
