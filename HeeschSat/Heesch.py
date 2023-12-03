@@ -6,6 +6,11 @@ from time import time
 import matplotlib.colors as mcolors
 from multiprocessing import Process, Manager, Pool, cpu_count
 
+"""
+Class implemented based on Kaplan's Heesch Numbers of Unmarked Polyforms
+(https://cs.uwaterloo.ca/~csk/heesch/unmarked.pdf)
+"""
+
 
 def define_colors():
     lst = sorted(mcolors.CSS4_COLORS,
@@ -79,6 +84,10 @@ class Heesch(ABC):
         # O(rm) time
         rotate_indices = self.check_rotational_symmetry()
 
+        # TODO
+        # for idx, val in enumerate(itertools.product(range(0, 3), *[range(s) for s in list(grid_shape)], range(0, 2))):
+        #     print(idx, val)
+
         # transform variables (if a transform is used)
         # O(kn^4rm^2) time
         offset = self.grid.size[0] * self.grid.size[1] * len(self.rotation_matrices)
@@ -124,7 +133,7 @@ class Heesch(ABC):
                                                         range(0, self.grid.size[1]),
                                                         range(0, len(self.rotation_matrices))
                                                         )):
-                if self.transforms[(val[0], v2[0], v2[1], v2[2])] is not None:
+                if self.transforms[(val[0]-1, v2[0], v2[1], v2[2])] is not None:
                     if self.grid.is_overlapping(self.transforms[(val[0]-1, v2[0], v2[1], v2[2])][2], transform):
                         adjacent = True
 
