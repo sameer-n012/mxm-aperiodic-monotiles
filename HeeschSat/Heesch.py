@@ -6,6 +6,11 @@ from time import time
 import matplotlib.colors as mcolors
 from multiprocessing import Process, Manager, Pool, cpu_count
 
+"""
+Class implemented based on Kaplan's Heesch Numbers of Unmarked Polyforms
+(https://cs.uwaterloo.ca/~csk/heesch/unmarked.pdf)
+"""
+
 
 # defines the colors for plotting
 def define_colors():
@@ -85,6 +90,10 @@ class Heesch(ABC):
         # O(rm) time
         rotate_indices = self.check_rotational_symmetry()
 
+        # TODO
+        # for idx, val in enumerate(itertools.product(range(0, 3), *[range(s) for s in list(grid_shape)], range(0, 2))):
+        #     print(idx, val)
+
         # transform variables (if a transform is used)
         # O(kn^4rm^2) time
         offset = self.grid.size[0] * self.grid.size[1] * len(self.rotation_matrices)
@@ -132,6 +141,7 @@ class Heesch(ABC):
                 continue
 
             adjacent = False
+<<<<<<< HEAD
             for i2, v2 in enumerate(
                 itertools.product(
                     range(0, self.grid.size[0]),
@@ -143,6 +153,14 @@ class Heesch(ABC):
                     if self.grid.is_overlapping(
                         self.transforms[(val[0] - 1, v2[0], v2[1], v2[2])][2], transform
                     ):
+=======
+            for i2, v2 in enumerate(itertools.product(range(0, self.grid.size[0]),
+                                                        range(0, self.grid.size[1]),
+                                                        range(0, len(self.rotation_matrices))
+                                                        )):
+                if self.transforms[(val[0]-1, v2[0], v2[1], v2[2])] is not None:
+                    if self.grid.is_overlapping(self.transforms[(val[0]-1, v2[0], v2[1], v2[2])][2], transform):
+>>>>>>> a142165d9e0cdbcecfcae11c2458d9360fb715d1
                         adjacent = True
 
             if not adjacent:
