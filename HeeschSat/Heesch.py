@@ -141,7 +141,6 @@ class Heesch(ABC):
                 continue
 
             adjacent = False
-<<<<<<< HEAD
             for i2, v2 in enumerate(
                 itertools.product(
                     range(0, self.grid.size[0]),
@@ -149,18 +148,10 @@ class Heesch(ABC):
                     range(0, len(self.rotation_matrices)),
                 )
             ):
-                if (val[0] - 1, v2[0], v2[1], v2[2]) in self.transforms.keys():
+                if self.transforms[(val[0] - 1, v2[0], v2[1], v2[2])] is not None:
                     if self.grid.is_overlapping(
                         self.transforms[(val[0] - 1, v2[0], v2[1], v2[2])][2], transform
                     ):
-=======
-            for i2, v2 in enumerate(itertools.product(range(0, self.grid.size[0]),
-                                                        range(0, self.grid.size[1]),
-                                                        range(0, len(self.rotation_matrices))
-                                                        )):
-                if self.transforms[(val[0]-1, v2[0], v2[1], v2[2])] is not None:
-                    if self.grid.is_overlapping(self.transforms[(val[0]-1, v2[0], v2[1], v2[2])][2], transform):
->>>>>>> a142165d9e0cdbcecfcae11c2458d9360fb715d1
                         adjacent = True
 
             if not adjacent:

@@ -1,27 +1,24 @@
-import matplotlib.pyplot as plt
+import os, glob
 
+kite_points = []
+path = "../JosephMyers/"
+for filename in glob.glob(os.path.join(path, "*.txt")):
+    with open(os.path.join(os.getcwd(), filename), "r") as f:  # open in readonly mode
+        # do your stuff
+        # Using readlines()
+        Lines = f.readlines()
 
-def plot_kite(points):
-    # Unpack points
-    x = [point[0] for point in points]
-    y = [point[1] for point in points]
+        count = 0
+        # Strips the newline character
+        print("New File")
+        for line in Lines:
+            count += 1
+            t = line.strip()
+            # Data points
+            # kite_points.append(t.spilt(") "))
+            # print(kite_points)
+            print("Line{}: {}".format(count, line.strip()))
 
-    # Plot the kite shape
-    plt.plot(x + [x[0]], y + [y[0]], marker="o")
-
-    # Connect the points to form the kite
-    plt.plot([x[0], x[2]], [y[0], y[2]], linestyle="-", color="black")
-    plt.plot([x[1], x[3]], [y[1], y[3]], linestyle="-", color="black")
-
-    plt.xlabel("X-axis")
-    plt.ylabel("Y-axis")
-    plt.title("Kite Plot")
-    plt.grid(True)
-    plt.show()
-
-
-# Data points for the kite
-kite_points = [(0, 0), (1, 0), (2, 1), (2, 0)]
 
 """
     
@@ -35,7 +32,7 @@ given polykite coordinates $(3x + (k mod 3), 2y + floor(k/3))$.
 """
 a = 0
 b = 1
- # p = [a, b]
+# p = [a, b]
 
 x = a / 3
 y = b / 2
@@ -46,8 +43,3 @@ k = (b % 2) * 3 + (a % 3)
 # and then try to read in the file line by line
 # and maybe we can start reading by a specific line
 # and stop if we need to
-
-[[x1, y1, k1], [x2, y2, k2], ...]  # numpy array
-
-# Plot the kite
-plot_kite(kite_points)
