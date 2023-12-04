@@ -16,7 +16,25 @@ if __name__ == "__main__":
 
     t3 = np.array([[0, -2], [0, -1], [0, 0], [0, 1], [-1, -2], [-1, 2]])
 
-    ph = PolyhexagonHeesch.polyhexagonHeesch(t1, coronas=3, grid_size=(20, 20))
+    t4 = np.array([[0, 0], [0, -1], [0, -2], [-1, 1], [1, -1], [2, -1], [2, 0]])
+
+    t5 = np.array(
+        [
+            [0, 0],
+            [-1, 1],
+            [-2, 2],
+            [-2, 1],
+            [-3, 1],
+            [1, 0],
+            [1, -1],
+            [0, -1],
+            [-1, -1],
+            [-1, -2],
+            [-3, 0],
+        ]
+    )
+
+    ph = PolyhexagonHeesch.polyhexagonHeesch(t5, coronas=2)
     ph.generate_variables()
     ph.construct_sat()
     ph.solve_sat()
@@ -32,18 +50,19 @@ if __name__ == "__main__":
         #     print(ph.transforms[key])
         #     break
     print("counts: ", count)
+    print("time: ", ph.times[-1] - ph.times[0])
 
     exit()
 
     for k in range(0, 4):
         for s in range(max(6 * k, 6), 8 * k):
-            ph = PolyhexagonHeesch.polyhexagonHeesch(t1, k, (s, s))
+            ph = PolyhexagonHeesch(t1, k, (s, s))
             ph.generate_variables()
             ph.construct_sat()
             ph.solve_sat()
             ph.write(directory="tests/out")
 
-            ph = PolyhexagonHeesch.polyhexagonHeesch(t2, k, (s, s))
+            ph = PolyhexagonHeesch(t2, k, (s, s))
             ph.generate_variables()
             ph.construct_sat()
             ph.solve_sat()

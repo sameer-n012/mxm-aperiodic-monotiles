@@ -33,12 +33,14 @@ half of the hexagon.  Then, in hexagon $(x, y)$, kite number~$k$ is
 given polykite coordinates $(3x + (k mod 3), 2y + floor(k/3))$.
     
 """
-
-p = [a, b]
+a = 0
+b = 1
+ # p = [a, b]
 
 x = a / 3
 y = b / 2
 k = (b % 2) * 3 + (a % 3)
+
 
 # TODO: transform (a,b) to (x,y,k) using above equations
 # and then try to read in the file line by line

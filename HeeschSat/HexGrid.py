@@ -11,6 +11,18 @@ class HexGrid(Grid):
 
     @staticmethod
     def is_adjacent(x, y):
+        """
+        Determines whether two coordinates are adjacent to each other
+        on the grid. The coordinates x, y should be specified as a tuple
+        or list of length 2: [x0, x1]. Two coordinates are adjacent if any of
+        the following are true:
+            - x0 == y0 and x1 and y1 differ by at most 1
+            - x1 == y1 and x0 and y0 differ by at most 1
+            - x0 is 1 greater than y0 and x1 is 1 less than y1
+            - x0 is 1 less than y0 and x1 is 1 greater than y1
+        Runs in O(1) time. Returns true if they are adjacent and false
+        otherwise.
+        """
         return (
                 (x[0] == y[0] and x[1] - 1 <= y[1] <= x[1] + 1) or
                 (x[1] == y[1] and x[0] - 1 <= y[0] <= x[0] + 1) or
