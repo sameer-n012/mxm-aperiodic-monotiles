@@ -56,13 +56,8 @@ class Grid(ABC):
 
         return np.matmul(self.basis, coords.T)
 
-    def indices(self) -> np.array:
-        """
-        Returns an array of indices on the grid. Runs in O(n^2) time for a grid
-        of size n*n.
-        """
-
-        return np.array([(i, j) for j in range(self.size[1]) for i in range(self.size[0])])
+    def indices(self) -> np.ndarray:
+        pass
 
     def is_overlapping(self, m1: np.ndarray, m2: np.ndarray) -> bool:
         """
@@ -97,6 +92,13 @@ class Grid(ABC):
         a shape of size m*2.
         """
 
-        return ((shape[:, 0] < self.size[0]).all() and
-                (shape[:, 1] < self.size[1]).all() and
-                (shape >= 0).all())
+        for i in range(shape.shape[1]):
+            if not shape[:, i] < self.size[i].all():
+                return False
+
+        return (shape >= 0).all()
+
+        # old
+        # return ((shape[:, 0] < self.size[0]).all() and
+        #         (shape[:, 1] < self.size[1]).all() and
+        #         (shape >= 0).all())

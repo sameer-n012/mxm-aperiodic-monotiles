@@ -10,7 +10,7 @@ class KiteGrid(Grid):
 
     def __init__(self, size: tuple, pos: int):
         super().__init__(size, None)
-        self.pos = pos # TODO unused?
+        self.pos = pos  # TODO unused?
 
     def apply_basis(self, coords: np.ndarray) -> np.array:
         """
@@ -19,6 +19,14 @@ class KiteGrid(Grid):
         """
         # TODO complete
         pass
+
+    def indices(self) -> np.ndarray:
+        """
+        Returns an array of indices on the grid. Runs in O(kn^2) time for a grid
+        of size n*n*k.
+        """
+        return np.array([(i, j, k) for j in range(self.size[1]) for i in range(self.size[0])
+                         for k in range(self.size[2])])
 
     @staticmethod
     def is_adjacent(x, y):
@@ -44,20 +52,20 @@ class KiteGrid(Grid):
                 )
             case 3:
                 return (
-                    x[0] - 1 == y[0] and
-                    ((x[1] == y[1] and (y[2] == 1 or y[2] == 0)) or
-                     (x[1] + 1 == y[1] and (y[2] == 5 or y[2] == 0)))
+                        x[0] - 1 == y[0] and
+                        ((x[1] == y[1] and (y[2] == 1 or y[2] == 0)) or
+                         (x[1] + 1 == y[1] and (y[2] == 5 or y[2] == 0)))
                 )
             case 4:
                 return (
-                    (x[0] - 1 == y[0] and x[1] == y[1] and (y[2] == 1 or y[2] == 0)) or
-                    (x[0] == y[0] and x[1] - 1 == y[1] and (y[2] == 1 or y[2] == 2))
+                        (x[0] - 1 == y[0] and x[1] == y[1] and (y[2] == 1 or y[2] == 0)) or
+                        (x[0] == y[0] and x[1] - 1 == y[1] and (y[2] == 1 or y[2] == 2))
                 )
             case 5:
                 return (
-                    x[1] - 1 == y[1] and
-                    ((x[0] == y[0] and (y[2] == 1 or y[2] == 2)) or
-                     (x[0] + 1 == y[0] and (y[2] == 2 or y[2] == 3)))
+                        x[1] - 1 == y[1] and
+                        ((x[0] == y[0] and (y[2] == 1 or y[2] == 2)) or
+                         (x[0] + 1 == y[0] and (y[2] == 2 or y[2] == 3)))
                 )
 
     @staticmethod

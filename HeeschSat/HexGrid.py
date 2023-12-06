@@ -9,6 +9,13 @@ class HexGrid(Grid):
     def __init__(self, size: tuple):
         super().__init__(size, np.array([[1, 0], [0.5, sqrt(3) * 0.5]]))
 
+    def indices(self) -> np.ndarray:
+        """
+        Returns an array of indices on the grid. Runs in O(n^2) time for a grid
+        of size n*n.
+        """
+        return np.array([(i, j) for j in range(self.size[1]) for i in range(self.size[0])])
+
     @staticmethod
     def is_adjacent(x, y) -> bool:
         """
