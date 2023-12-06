@@ -1,5 +1,6 @@
 import numpy as np
 from HeeschSat.PolyhexagonHeesch import PolyhexagonHeesch
+from HeeschSat.PolykiteHeesch import PolykiteHeesch
 if __name__ == '__main__':
 
     print('Test Starting...')
@@ -38,11 +39,16 @@ if __name__ == '__main__':
         [2, 0]
     ])
 
-    ph = PolyhexagonHeesch(t1, coronas=3)
+    tk1 = np.array([
+        [0, 0, 0],
+        [1, 0, 2]
+    ])
+
+    ph = PolykiteHeesch(tk1, coronas=0)
     ph.generate_variables()
     ph.construct_sat()
     ph.solve_sat()
-    ph.write(directory='tests/out', plot=True)
+    ph.write(directory='tests/out', plot=False)
 
     # Count transforms in each corona
     print(len(ph.transforms))

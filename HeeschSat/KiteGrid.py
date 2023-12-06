@@ -96,6 +96,9 @@ class KiteGrid(Grid):
             match kite[2]:
                 case 0:
                     new_kite.append(2)
+                    # print(new_kite, kite)
+                    # new_kite = np.hstack((new_kite, np.full(shape=(kite.shape[0], 2), fill_value=2)))
+                    # print(new_kite)
                 case 1:
                     new_kite.append(1)
                 case 2:
