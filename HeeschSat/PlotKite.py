@@ -27,7 +27,8 @@ for filename in glob.glob(os.path.join(path, "*.txt")):
             for a, b in dataList:
                 x = floor(a / 3)
                 y = floor(b / 2)
-                k = floor((b % 2) * 3 + (a % 3))
+                k = floor((b % 2) * 3 + (a % 3)) % 3
+
                 print(x, y, k)
             lineCount += 1
 
