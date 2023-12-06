@@ -1,5 +1,5 @@
 from HeeschSat.Heesch import Heesch
-from HeeschSat.HexGrid import HexGrid
+from HeeschSat.KiteGrid import KiteGrid
 import numpy as np
 from time import time
 import itertools
@@ -7,27 +7,21 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import RegularPolygon
 
 
-class PolyhexagonHeesch(Heesch):
+class PolykiteHeesch(Heesch):
     def __init__(self, shape, coronas=0, grid_size=None):
         super().__init__()
-        self.rotation_matrices = [
-            np.matmul(
-                np.linalg.matrix_power(np.array([[1, 1], [0, -1]]), j),
-                np.linalg.matrix_power(np.array([[0, -1], [1, 1]]), i),
-            )
-            for i in range(0, 6)
-            for j in range(0, 2)
-        ]
         self.k_cor = coronas
         self.shape = shape
         self.shape_size = self.shape.shape
-        self.shape_rad = np.max(np.ptp(self.shape, axis=0)) + 1
+        self.shape_rad = np.max(np.ptp(self.shape[:, 0:2], axis=0)) + 1
         if grid_size is None:
             grid_size = int(2 * self.shape_rad * (self.k_cor + 1))
-            grid_size = (grid_size, grid_size)
-        self.grid = HexGrid(grid_size)
+            grid_size = (grid_size, grid_size, 6)
+        self.grid = KiteGrid(grid_size, 0)
+        self.num_rotations = 0
 
-    def generate_variables(self, start_corona=1):
+    def generate_variables(self, start_corona: int = 0):
+        # TODO implement, not changed much yet
         """
         Generates the two sets of variables that are used to solve the Heesch
         problem. These are the transformation variables (one variable for each
@@ -57,6 +51,7 @@ class PolyhexagonHeesch(Heesch):
         translate_mat = np.empty(self.shape_size, dtype=int)  # O(m) time
         translate_mat[:, 0] = mid[0]  # O(m) time
         translate_mat[:, 1] = mid[1]  # O(m) time
+        translate_mat[:, 2] = 0
         transform = self.shape + translate_mat  # O(m) time
         halo = np.unique([i for c in transform for i in self.grid.haloIdx(c)], axis=0)  # O(m^2n^2) time
         transform_set = set(map(tuple, transform))
@@ -67,6 +62,7 @@ class PolyhexagonHeesch(Heesch):
 
         # get the used rotation matrices (some might result in rotational symmetry)
         # O(rm) time
+        self.num_rotations = len(self.grid.get_transformations(transform))
         rotate_indices = self.check_rotational_symmetry()
 
         corona_halos = [set() for _ in range(0, self.k_cor + 1)]
@@ -153,39 +149,8 @@ class PolyhexagonHeesch(Heesch):
         self.times[2] = time()
 
     def check_rotational_symmetry(self):
-        """
-        Checks whether any rotational transformations to the given shape result
-        in duplicate shapes. Returns a list with 0's in the indices of
-        rotational transforms that contain duplicates and 1's in the indices of
-        rotational transforms that are not duplicates. The indices correspond
-        to the indices of self.rotation_matrices. Runs in O(rm^2) time where
-        r is the number of rotation/reflection matrices and m*2 is the size
-        of the shape.
-        """
-
-        seen = []
-        out = [1] * len(self.rotation_matrices)
-
-        for idx, rm in enumerate(self.rotation_matrices):
-            for x in range(-self.shape_rad, self.shape_rad):
-                for y in range(-self.shape_rad, self.shape_rad):
-                    translate_mat = np.empty(self.shape_size, dtype=int)
-                    translate_mat[:, 0] = x
-                    translate_mat[:, 1] = y
-                    transform = np.matmul(rm, self.shape.T).T + translate_mat
-
-                    t = set(map(tuple, transform))
-                    if t in seen:
-                        out[idx] = 0
-            if out[idx] == 1:
-                seen.append(set(map(tuple, np.matmul(rm, self.shape.T).T)))
-            # t = set(map(tuple, np.matmul(rm, self.shape.T).T))
-            # if t in seen:
-            #     out[idx] = 0
-            # else:
-            #     seen.append(t)
-
-        return out
+        # TODO
+        return [1] * self.num_rotations
 
     def plot(self, show=True, write=False, filename=None, directory=None):
         if self.model is None:
