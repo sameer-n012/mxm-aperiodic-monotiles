@@ -4,7 +4,7 @@ import itertools
 from pysat.solvers import Solver
 from time import time
 import matplotlib.colors as mcolors
-from multiprocessing import Process, Manager, Pool, cpu_count
+from multiprocessing import Pool, cpu_count
 
 """
 Class implemented based on Kaplan's Heesch Numbers of Unmarked Polyforms
@@ -12,13 +12,12 @@ Class implemented based on Kaplan's Heesch Numbers of Unmarked Polyforms
 """
 
 
+# defines the colors for plotting
 def define_colors():
-    lst = sorted(mcolors.CSS4_COLORS,
-                 key=lambda c:
-                 tuple(
-                     mcolors.rgb_to_hsv(mcolors.to_rgb(c))
-                 ))
-    lst.remove('black')
+    lst = sorted(
+        mcolors.CSS4_COLORS, key=lambda c: tuple(mcolors.rgb_to_hsv(mcolors.to_rgb(c)))
+    )
+    lst.remove("black")
     return lst, [0, 14, 33, 53, 64, 85, 122, 132]
 
 
@@ -65,10 +64,15 @@ class Heesch(ABC):
         """
 
         self.times[0] = time()
-
+        # midpoint of the grid
         mid = int(self.grid.size[0] / 2), int(self.grid.size[1] / 2)
-
-        max_transforms = (self.k_cor + 1) * self.grid.size[0] * self.grid.size[1] * len(self.rotation_matrices)
+        # calculate the maximum number of transform
+        max_transforms = (
+            (self.k_cor + 1)
+            * self.grid.size[0]
+            * self.grid.size[1]
+            * len(self.rotation_matrices)
+        )
 
         # include single 0-corona transform as original shape
         # O(m^2n^2) time
@@ -79,6 +83,7 @@ class Heesch(ABC):
         halo = np.unique([i for c in transform for i in self.grid.haloIdx(c)], axis=0)  # O(m^2n^2) time
         transform_set = set(map(tuple, transform))
         halo_set = set(map(tuple, halo)) - transform_set
+
         key = (0, mid[0], mid[1], 0)
         self.transforms[key] = self.get_transform_idx(key), transform, halo, transform_set, halo_set
 
@@ -120,11 +125,15 @@ class Heesch(ABC):
             translate_mat[:, 0] = val[1]  # O(m) time
             translate_mat[:, 1] = val[2]  # O(m) time
             rotate_mat = self.rotation_matrices[val[3]]
-            transform = np.matmul(rotate_mat, self.shape.T).T + translate_mat  # O(m) time
+            transform = (
+                np.matmul(rotate_mat, self.shape.T).T + translate_mat
+            )  # O(m) time
 
             # ignore any transforms that are more than k_cor*shape_radius from the center
             # O(m) time
-            if max(abs(val[1] - mid[0]), abs(val[2] - mid[1])) > (val[0] + 1) * (self.shape_rad + 0):
+            if max(abs(val[1] - mid[0]), abs(val[2] - mid[1])) > (val[0] + 1) * (
+                self.shape_rad + 0
+            ):
                 continue
 
             # ignore any transforms that are less than k_cor from the center
@@ -160,9 +169,6 @@ class Heesch(ABC):
             corona_halos[val[0]] = corona_halos[val[0]] | halo_set
             self.transforms[tuple(val)] = (idx + offset + 1, transform, halo, transform_set, halo_set)
 
-            # debug TODO delete
-            if len(self.transforms[tuple(val)]) != 5:
-                raise Exception(f'{self.transforms[tuple(val)], transform_set, halo_set}')
 
         self.times[1] = time()
 
@@ -174,6 +180,7 @@ class Heesch(ABC):
         self.times[2] = time()
 
     def construct_sat(self) -> Solver:
+        # Constructs the SAT formula for the problem
         """
         Constructs the clauses of the boolean satisfiability expression and
         adds it to the SAT solver, self.sat. Generates the clauses as specified
@@ -192,7 +199,9 @@ class Heesch(ABC):
 
         # 0-corona always used
         # O(1) time
-        k_0 = self.transforms[(0, int(self.grid.size[0] / 2), int(self.grid.size[1] / 2), 0)]
+        k_0 = self.transforms[
+            (0, int(self.grid.size[0] / 2), int(self.grid.size[1] / 2), 0)
+        ]
         s.add_clause([k_0[0]])
         self.num_clauses += 1
 
@@ -201,7 +210,6 @@ class Heesch(ABC):
         # if a transform is used, its cells are used
         # O(mt) time
         for k, v in self.transforms.items():
-
             # add each cell in the transform
             # O(m) time
             for c in v[1]:
@@ -230,7 +238,6 @@ class Heesch(ABC):
         # be used
         # O(mt) time
         for k, v in self.transforms.items():
-
             # do not consider nth corona
             if k[0] == self.k_cor:
                 continue
@@ -248,7 +255,9 @@ class Heesch(ABC):
         with Pool(processes=cpu_count()) as pool:
             # takes O(mt^2/n) for each process
             # adding clause from list does not change time complexity
-            for lst in pool.imap_unordered(self.check_overlap_mp, range(0, self.grid.size[0])):
+            for lst in pool.imap_unordered(
+                self.check_overlap_mp, range(0, self.grid.size[0])
+            ):
                 for l in lst:
                     s.add_clause(l)
                     self.num_clauses += 1
@@ -261,7 +270,9 @@ class Heesch(ABC):
         with Pool(processes=cpu_count()) as pool:
             # takes O(mt^2/kn) for each process
             # adding clause from list does not change time complexity
-            for lst in pool.imap_unordered(self.check_halo_overlap_mp, range(0, self.grid.size[0])):
+            for lst in pool.imap_unordered(
+                self.check_halo_overlap_mp, range(0, self.grid.size[0])
+            ):
                 for l in lst:
                     s.add_clause(l)
                     self.num_clauses += 1
@@ -273,7 +284,6 @@ class Heesch(ABC):
         # O(mt^2) time
         for k1, v1 in self.transforms.items():
             for k2, v2 in self.transforms.items():
-
                 # only consider coronas < k-1
                 if k2[0] >= k1[0] - 1:
                     continue
@@ -339,11 +349,17 @@ class Heesch(ABC):
         """
 
         idx -= 1
-        if idx >= (self.k_cor + 1) * self.grid.size[0] * self.grid.size[1] * len(self.rotation_matrices):
+        if idx >= (self.k_cor + 1) * self.grid.size[0] * self.grid.size[1] * len(
+            self.rotation_matrices
+        ):
             return None
 
-        v1 = int(idx / (self.grid.size[0] * self.grid.size[1] * len(self.rotation_matrices)))
-        idx -= v1 * (self.grid.size[0] * self.grid.size[1] * len(self.rotation_matrices))
+        v1 = int(
+            idx / (self.grid.size[0] * self.grid.size[1] * len(self.rotation_matrices))
+        )
+        idx -= v1 * (
+            self.grid.size[0] * self.grid.size[1] * len(self.rotation_matrices)
+        )
         v2 = int(idx / (self.grid.size[1] * len(self.rotation_matrices)))
         idx -= v2 * (self.grid.size[1] * len(self.rotation_matrices))
         v3 = int(idx / (len(self.rotation_matrices)))
@@ -359,11 +375,13 @@ class Heesch(ABC):
         dictionary. Runs in O(1) time.
         """
 
-        return key[0] * self.grid.size[0] * self.grid.size[1] * len(self.rotation_matrices) + \
-               key[1] * self.grid.size[1] * len(self.rotation_matrices) + \
-               key[2] * len(self.rotation_matrices) + \
-               key[3] + \
-               1
+        return (
+            key[0] * self.grid.size[0] * self.grid.size[1] * len(self.rotation_matrices)
+            + key[1] * self.grid.size[1] * len(self.rotation_matrices)
+            + key[2] * len(self.rotation_matrices)
+            + key[3]
+            + 1
+        )
 
     def check_overlap_mp(self, i1: int):
         """
@@ -401,7 +419,10 @@ class Heesch(ABC):
                 continue
 
             # O(1) time
-            if max(abs(v1[1][0][0] - v2[1][0][0]), abs(v1[1][0][1] - v2[1][0][1])) > 2 * self.shape_rad:
+            if (
+                max(abs(v1[1][0][0] - v2[1][0][0]), abs(v1[1][0][1] - v2[1][0][1]))
+                > 2 * self.shape_rad
+            ):
                 continue
 
             # O(1) time
@@ -472,14 +493,15 @@ class Heesch(ABC):
             # O(tm/k) time
             l = [-v1[0]]
             for k2, v2 in self.transforms.items():
-
                 # only consider the k and k-1 coronas
                 if k1[0] != k2[0] + 1:
                     continue
 
                 # Do not consider to be overlapping if more than 2*shape_radius away from each other
                 # O(1) time
-                if max(abs(v1[1][0][0] - v2[1][0][0]), abs(v1[1][0][1] - v2[1][0][1])) > 2 * (self.shape_rad + 1):
+                if max(
+                    abs(v1[1][0][0] - v2[1][0][0]), abs(v1[1][0][1] - v2[1][0][1])
+                ) > 2 * (self.shape_rad + 1):
                     continue
 
                 # checks if any two rows in the transform and second transform's
@@ -528,7 +550,7 @@ class Heesch(ABC):
 
         return out
 
-    def write(self, directory='.', plot=True):
+    def write(self, directory=".", plot=True):
         """
         Writes the output of the Heesch problem to a file. The filename is
         given by the time of writing. The directory parameter specifies the
@@ -541,34 +563,34 @@ class Heesch(ABC):
 
         filename = str(int(time()))
 
-        with open(directory + '/' + filename + '.txt', 'w+') as f:
+        with open(directory + "/" + filename + ".txt", "w+") as f:
+            f.write(f"File: {filename}\n")
+            f.write(f"Start Time: {self.times[0]}\n")
+            f.write(f"Grid Size: {self.grid.size}\n")
+            f.write(f"Coronas: {self.k_cor}\n")
+            f.write(f"Shape Size: {self.shape_size}\n")
+            f.write(f"Shape Radius: {self.shape_rad}\n")
+            f.write(f"Shape: \n")
+            f.write(f"{str(self.shape)}\n")
 
-            f.write(f'File: {filename}\n')
-            f.write(f'Start Time: {self.times[0]}\n')
-            f.write(f'Grid Size: {self.grid.size}\n')
-            f.write(f'Coronas: {self.k_cor}\n')
-            f.write(f'Shape Size: {self.shape_size}\n')
-            f.write(f'Shape Radius: {self.shape_rad}\n')
-            f.write(f'Shape: \n')
-            f.write(f'{str(self.shape)}\n')
+            f.write("--------------------------------------------------\n")
 
-            f.write('--------------------------------------------------\n')
-
-            f.write(f'Total Clauses: {self.num_clauses}\n')
-            f.write(f'SAT Model: \n')
+            f.write(f"Total Clauses: {self.num_clauses}\n")
+            f.write(f"SAT Model: \n")
             if self.model is not None:
-                f.write(f'\t{str(self.model)}\n')
+                f.write(f"\t{str(self.model)}\n")
             else:
-                f.write(f'\tNo Model (Unsolvable)\n')
-            f.write('Times: \n')
+                f.write(f"\tNo Model (Unsolvable)\n")
+            f.write("Times: \n")
             sum_time = 0.0
             for i, t in enumerate(self.times):
                 f.write(f'\tTimestamp {i:02d}: {t - sum_time - self.times[0]}s '
                         f'({self.ops[i] - self.ops[i - 1] if i != 0 else 0} ops)\n')
-                sum_time = t - self.times[0]
-            f.write(f'Total Time: {sum_time}s ({self.ops[-1]} ops)\n')
 
-            f.write('--------------------------------------------------\n')
+                sum_time = t - self.times[0]
+            f.write(f"Total Time: {sum_time}s ({self.ops[-1]} ops)\n")
+
+            f.write("--------------------------------------------------\n")
 
             f.write(f'Transforms Generated ({len(self.transforms)}): \n')
             k_count = [0] * (self.k_cor + 1)
@@ -580,6 +602,7 @@ class Heesch(ABC):
             if self.model is not None:
                 num_transforms = len([i for i in self.model if i > 0 and self.get_transform(i) is not None])
                 f.write(f'Transforms Used ({num_transforms}): \n')
+
                 for i in self.model:
                     if i <= 0:
                         continue
@@ -587,9 +610,9 @@ class Heesch(ABC):
                     if t is None:
                         break
                     f.write(f"Transform ID: {i} {self.get_transform(i)}: \n")
-                    f.write(f'{str(self.transforms[t][1])}\n')
+                    f.write(f"{str(self.transforms[t][1])}\n")
             else:
-                f.write('\tNo Model (Unsolvable)')
+                f.write("\tNo Model (Unsolvable)")
 
         if plot:
             self.plot(show=False, write=True, filename=filename, directory=directory)

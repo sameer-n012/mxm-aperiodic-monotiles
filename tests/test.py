@@ -1,6 +1,5 @@
 import numpy as np
 from HeeschSat.PolyhexagonHeesch import PolyhexagonHeesch
-
 if __name__ == '__main__':
 
     print('Test Starting...')
