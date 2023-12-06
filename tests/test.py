@@ -39,7 +39,7 @@ if __name__ == '__main__':
         [2, 0]
     ])
 
-    ph = PolyhexagonHeesch(t4, coronas=2)
+    ph = PolyhexagonHeesch(t1, coronas=3)
     ph.generate_variables()
     ph.construct_sat()
     ph.solve_sat()
@@ -56,6 +56,8 @@ if __name__ == '__main__':
         #     break
     print('counts: ', count)
     print('time: ', ph.times[-1] - ph.times[0])
+
+    print('Test Complete')
 
     exit()
 

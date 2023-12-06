@@ -82,6 +82,9 @@ class Grid(ABC):
         # return not (c == 1).all()
         return len(set(map(tuple, m1)) & set(map(tuple, m2))) > 0
 
+    def is_overlapping_set(self, m1: set, m2: set) -> bool:
+        return len(m1 & m2) > 0
+
     def in_bounds(self, shape: np.ndarray) -> bool:
         """
         Checks whether the shape given is within the bounds of the grid. The

@@ -50,11 +50,11 @@ class Heesch(ABC):
         self.times = [0.0] * Heesch.num_timestamps
         self.ops = [0] * Heesch.num_timestamps
 
-    def generate_variables(self):
+    def generate_variables(self, start_corona=1):
         """
         Generates the two sets of variables that are used to solve the Heesch
         problem. These are the transformation variables (one variable for each
-        unique possible tranformation in each corona) and the cell variables
+        unique possible transformation in each corona) and the cell variables
         (one variable for each cell in the grid). The 0-corona only contains a
         single transformation in the center of the grid. All other coronas
         contain transformations that are bounded by the shape radius and the
@@ -77,12 +77,17 @@ class Heesch(ABC):
         translate_mat[:, 1] = mid[1]  # O(m) time
         transform = self.shape + translate_mat  # O(m) time
         halo = np.unique([i for c in transform for i in self.grid.haloIdx(c)], axis=0)  # O(m^2n^2) time
+        transform_set = set(map(tuple, transform))
+        halo_set = set(map(tuple, halo)) - transform_set
         key = (0, mid[0], mid[1], 0)
-        self.transforms[key] = self.get_transform_idx(key), transform, halo
+        self.transforms[key] = self.get_transform_idx(key), transform, halo, transform_set, halo_set
 
         # get the used rotation matrices (some might result in rotational symmetry)
         # O(rm) time
         rotate_indices = self.check_rotational_symmetry()
+
+        corona_halos = [set() for _ in range(0, self.k_cor + 1)]
+        corona_halos[0] = halo_set
 
         # TODO
         # for idx, val in enumerate(itertools.product(range(0, 3), *[range(s) for s in list(grid_shape)], range(0, 2))):
@@ -91,7 +96,7 @@ class Heesch(ABC):
         # transform variables (if a transform is used)
         # O(kn^4rm^2) time
         offset = self.grid.size[0] * self.grid.size[1] * len(self.rotation_matrices)
-        for idx, val in enumerate(itertools.product(range(1, self.k_cor + 1),
+        for idx, val in enumerate(itertools.product(range(start_corona, self.k_cor + 1),
                                                     range(0, self.grid.size[0]),
                                                     range(0, self.grid.size[1]),
                                                     range(0, len(self.rotation_matrices))
@@ -99,6 +104,9 @@ class Heesch(ABC):
 
             # do not generate any 0-corona transforms
             if val[0] == 0:
+                continue
+
+            if tuple(val) in self.transforms and self.transforms[tuple(val)] is not None:
                 continue
 
             # do not generate any rotation transforms where rotation is
@@ -128,21 +136,33 @@ class Heesch(ABC):
             if not self.grid.in_bounds(transform):
                 continue
 
-            adjacent = False
-            for i2, v2 in enumerate(itertools.product(range(0, self.grid.size[0]),
-                                                        range(0, self.grid.size[1]),
-                                                        range(0, len(self.rotation_matrices))
-                                                        )):
-                if self.transforms[(val[0]-1, v2[0], v2[1], v2[2])] is not None:
-                    if self.grid.is_overlapping(self.transforms[(val[0]-1, v2[0], v2[1], v2[2])][2], transform):
-                        adjacent = True
+            # adjacent = False
+            # for i2, v2 in enumerate(itertools.product(range(0, self.grid.size[0]),
+            #                                           range(0, self.grid.size[1]),
+            #                                           range(0, len(self.rotation_matrices))
+            #                                           )):
+            #     if (val[0] - 1, v2[0], v2[1], v2[2]) in self.transforms:
+            #         if self.grid.is_overlapping(self.transforms[(val[0] - 1, v2[0], v2[1], v2[2])][2], transform):
+            #             adjacent = True
+            #
+            # if not adjacent:
+            #     continue
 
-            if not adjacent:
+            # maybe could generate halos of an entire corona
+            # precompute set reps of each transform
+            transform_set = set(map(tuple, transform))
+            if not self.grid.is_overlapping_set(corona_halos[val[0]-1], transform_set):
                 continue
 
             # O(m^2n^2) time
             halo = np.unique([i for c in transform for i in self.grid.haloIdx(c)], axis=0)  # O(m^2n^2)
-            self.transforms[tuple(val)] = idx + offset + 1, transform, halo
+            halo_set = set(map(tuple, halo)) - transform_set
+            corona_halos[val[0]] = corona_halos[val[0]] | halo_set
+            self.transforms[tuple(val)] = (idx + offset + 1, transform, halo, transform_set, halo_set)
+
+            # debug TODO delete
+            if len(self.transforms[tuple(val)]) != 5:
+                raise Exception(f'{self.transforms[tuple(val)], transform_set, halo_set}')
 
         self.times[1] = time()
 
@@ -363,6 +383,17 @@ class Heesch(ABC):
         out = []
         # O(mt^2/n) time
         for (k1, v1), (k2, v2) in itertools.combinations(self.transforms.items(), 2):
+            # for k1, v1 in self.transforms.items():
+
+            # for k2 in range(0, self.k_cor):
+            #     for k5 in range(0, len(self.rotation_matrices)):
+            #         for k4 in range(k1[2], 0, -1):
+            #             key = (k2, i1, k4, k5)
+            #             if key not in self.transforms:
+            #                 continue
+
+            # v2 = self.transforms.get(key)
+
             if k1[1] != i1 and k2[1] != i1:
                 continue
 
@@ -373,10 +404,44 @@ class Heesch(ABC):
             if max(abs(v1[1][0][0] - v2[1][0][0]), abs(v1[1][0][1] - v2[1][0][1])) > 2 * self.shape_rad:
                 continue
 
+            # O(1) time
+            # if min(abs(v1[1][0][0] - v2[1][0][0]), abs(v1[1][0][1] - v2[1][0][1])) > 2 * self.shape_rad:
+            #     break
+
             # checks if any two rows in the transform are the same
             # O(m) time
-            if self.grid.is_overlapping(v1[1], v2[1]):  # O(m) time
+            # print(len(v1), len(v2))
+            if len(v1) != 5 or len(v2) != 5:
+                print(v1, v2)
+                raise Exception(f'akdslkajdlsakd \n {len(v1)}, {len(v2)}, {v1}, {v2}')
+            if self.grid.is_overlapping_set(v1[3], v2[3]):  # O(m) time
                 out.append([-v1[0], -v2[0]])
+
+                # for k4 in range(k1[2], self.grid.size[1], 1):
+                #     key = (k2, i1, k4, k5)
+                #     if key not in self.transforms:
+                #         continue
+                #
+                #     v2 = self.transforms.get(key)
+                #
+                #     # if k1[1] != i1 and k2[1] != i1:
+                #     #     continue
+                #
+                #     # if v1[0] >= v2[0]:
+                #     #     continue
+                #
+                #     # O(1) time
+                #     if max(abs(v1[1][0][0] - v2[1][0][0]), abs(v1[1][0][1] - v2[1][0][1])) > 2 * self.shape_rad:
+                #         continue
+                #
+                #     # O(1) time
+                #     if min(abs(v1[1][0][0] - v2[1][0][0]), abs(v1[1][0][1] - v2[1][0][1])) > 2 * self.shape_rad:
+                #         break
+                #
+                #     # checks if any two rows in the transform are the same
+                #     # O(m) time
+                #     if self.grid.is_overlapping(v1[1], v2[1]):  # O(m) time
+                #         out.append([-v1[0], -v2[0]])
 
         return out
 
@@ -420,7 +485,7 @@ class Heesch(ABC):
                 # checks if any two rows in the transform and second transform's
                 # halo are the same
                 # O(m) time
-                if self.grid.is_overlapping(v1[1], v2[2]):  # O(m) time
+                if self.grid.is_overlapping_set(v1[3], v2[4]):  # O(m) time
                     l.append(v2[0])
 
             if len(l) > 0:
@@ -434,7 +499,7 @@ class Heesch(ABC):
         in duplicate shapes. Returns a list with 0's in the indices of
         rotational transforms that contain duplicates and 1's in the indices of
         rotational transforms that are not duplicates. The indices correspond
-        to the indices of self.rotation_matrices. Runs in O(rm) time where
+        to the indices of self.rotation_matrices. Runs in O(rm^2) time where
         r is the number of rotation/reflection matrices and m*2 is the size
         of the shape.
         """
@@ -443,11 +508,23 @@ class Heesch(ABC):
         out = [1] * len(self.rotation_matrices)
 
         for idx, rm in enumerate(self.rotation_matrices):
-            t = set(map(tuple, np.matmul(rm, self.shape.T).T))
-            if t in seen:
-                out[idx] = 0
-            else:
-                seen.append(t)
+            for x in range(-self.shape_rad, self.shape_rad):
+                for y in range(-self.shape_rad, self.shape_rad):
+                    translate_mat = np.empty(self.shape_size, dtype=int)
+                    translate_mat[:, 0] = x
+                    translate_mat[:, 1] = y
+                    transform = np.matmul(rm, self.shape.T).T + translate_mat
+
+                    t = set(map(tuple, transform))
+                    if t in seen:
+                        out[idx] = 0
+            if out[idx] == 1:
+                seen.append(set(map(tuple, np.matmul(rm, self.shape.T).T)))
+            # t = set(map(tuple, np.matmul(rm, self.shape.T).T))
+            # if t in seen:
+            #     out[idx] = 0
+            # else:
+            #     seen.append(t)
 
         return out
 
@@ -487,15 +564,22 @@ class Heesch(ABC):
             sum_time = 0.0
             for i, t in enumerate(self.times):
                 f.write(f'\tTimestamp {i:02d}: {t - sum_time - self.times[0]}s '
-                        f'({self.ops[i] - self.ops[i-1] if i != 0 else 0} ops)\n')
+                        f'({self.ops[i] - self.ops[i - 1] if i != 0 else 0} ops)\n')
                 sum_time = t - self.times[0]
             f.write(f'Total Time: {sum_time}s ({self.ops[-1]} ops)\n')
 
             f.write('--------------------------------------------------\n')
 
-            num_transforms = len([i for i in self.model if i > 0 and self.get_transform(i) is not None])
-            f.write(f'Transforms ({num_transforms}): \n')
+            f.write(f'Transforms Generated ({len(self.transforms)}): \n')
+            k_count = [0] * (self.k_cor + 1)
+            for key in self.transforms.keys():
+                k_count[key[0]] += 1
+            for k_idx, kc in enumerate(k_count):
+                f.write(f'\tCorona {k_idx}: {kc}\n')
+
             if self.model is not None:
+                num_transforms = len([i for i in self.model if i > 0 and self.get_transform(i) is not None])
+                f.write(f'Transforms Used ({num_transforms}): \n')
                 for i in self.model:
                     if i <= 0:
                         continue

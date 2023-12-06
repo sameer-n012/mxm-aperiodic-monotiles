@@ -10,7 +10,7 @@ class HexGrid(Grid):
         super().__init__(size, np.array([[1, 0], [0.5, sqrt(3) * 0.5]]))
 
     @staticmethod
-    def is_adjacent(x, y):
+    def is_adjacent(x, y) -> bool:
         """
         Determines whether two coordinates are adjacent to each other
         on the grid. The coordinates x, y should be specified as a tuple
@@ -29,5 +29,9 @@ class HexGrid(Grid):
                 (x[0] - 1 == y[0] and x[1] + 1 == y[1]) or
                 (x[0] + 1 == y[0] and x[1] - 1 == y[1])
         )
+
+    @staticmethod
+    def get_adjacent(x) -> np.ndarray:
+        pass
 
 
