@@ -18,7 +18,6 @@ class PolykiteHeesch(Heesch):
             grid_size = int(2 * self.shape_rad * (self.k_cor + 1))
             grid_size = (grid_size, grid_size, 6)
         self.grid = KiteGrid(grid_size, 0)
-        self.num_rotations = 0
 
     def generate_variables(self, start_corona: int = 0):
         # TODO implement, not changed much yet
@@ -62,7 +61,7 @@ class PolykiteHeesch(Heesch):
 
         # get the used rotation matrices (some might result in rotational symmetry)
         # O(rm) time
-        self.num_rotations = len(self.grid.get_transformations(transform))
+        t_rotations = self.grid.get_transformations(self.shape)
         rotate_indices = self.check_rotational_symmetry()
 
         corona_halos = [set() for _ in range(0, self.k_cor + 1)]
@@ -74,7 +73,7 @@ class PolykiteHeesch(Heesch):
         for idx, val in enumerate(itertools.product(range(start_corona, self.k_cor + 1),
                                                     range(0, self.grid.size[0]),
                                                     range(0, self.grid.size[1]),
-                                                    range(0, len(self.rotation_matrices))
+                                                    range(0, len(t_rotations))
                                                     )):
 
             # do not generate any 0-corona transforms
@@ -94,10 +93,7 @@ class PolykiteHeesch(Heesch):
             translate_mat = np.empty(self.shape_size, dtype=int)  # O(m) time
             translate_mat[:, 0] = val[1]  # O(m) time
             translate_mat[:, 1] = val[2]  # O(m) time
-            rotate_mat = self.rotation_matrices[val[3]]
-            transform = (
-                    np.matmul(rotate_mat, self.shape.T).T + translate_mat
-            )  # O(m) time
+            transform = t_rotations[val[3]] + translate_mat  # O(m) time
 
             # ignore any transforms that are more than k_cor*shape_radius from the center
             # O(m) time
@@ -149,10 +145,40 @@ class PolykiteHeesch(Heesch):
         self.times[2] = time()
 
     def check_rotational_symmetry(self):
-        # TODO
-        return [1] * self.num_rotations
+        """
+        Checks whether any rotational transformations to the given shape result
+        in duplicate shapes. Returns a list with 0's in the indices of
+        rotational transforms that contain duplicates and 1's in the indices of
+        rotational transforms that are not duplicates. The indices correspond
+        to the indices of self.rotation_matrices. Runs in O(rm^2) time where
+        r is the number of rotation/reflection matrices and m*2 is the size
+        of the shape.
+        """
+
+        seen = []
+        t_rotations = self.grid.get_transformations(self.shape)
+        out = [1] * len(t_rotations)
+
+        for idx, rt in enumerate(t_rotations):
+            for x in range(-self.shape_rad, self.shape_rad):
+                for y in range(-self.shape_rad, self.shape_rad):
+                    translate_mat = np.empty(self.shape_size, dtype=int)
+                    translate_mat[:, 0] = x
+                    translate_mat[:, 1] = y
+                    translate_mat[:, 2] = 0
+                    transform = rt + translate_mat
+
+                    t = set(map(tuple, transform))
+                    if t in seen:
+                        out[idx] = 0
+
+            if out[idx] == 1:
+                seen.append(set(map(tuple, rt)))
+
+        return out
 
     def plot(self, show=True, write=False, filename=None, directory=None):
+        # TODO edit
         if self.model is None:
             return
 

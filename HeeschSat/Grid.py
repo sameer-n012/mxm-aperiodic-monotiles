@@ -15,8 +15,7 @@ class Grid(ABC):
         ] where each row is a basis vector. Runs in O(1) time.
 
         """
-
-        self.basis = np.array([1, 0], [0, 1]) if basis is None else basis.T
+        self.basis = np.array([[1, 0], [0, 1]]) if basis is None else basis.T
         self.size = size
 
     @staticmethod
@@ -93,7 +92,7 @@ class Grid(ABC):
         """
 
         for i in range(shape.shape[1]):
-            if not shape[:, i] < self.size[i].all():
+            if not (shape[:, i] < self.size[i]).all():
                 return False
 
         return (shape >= 0).all()
