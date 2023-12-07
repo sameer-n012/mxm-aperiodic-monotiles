@@ -24,54 +24,57 @@ def read_from_file(path: str, start_line: int = 0, end_line: int = -1):
 
     kite_points = []
     lineCount = 0
-    for filename in glob.glob(os.path.join(path, "*.txt")):
-        with open(os.path.join(os.getcwd(), filename), "r") as f:  # open in readonly mode
-            # do your stuff
-            # Using readlines()
-            # startValue = 0
-            # endValue = 2
-            Lines = f.readlines()
-            # Strips the newline character
-            # print("New File")
+    with open('results/all_kites.txt', "w+") as f:
 
-            for line in Lines:
-                if lineCount < start_line:
+        for filename in glob.glob(os.path.join(path, "*.txt")):
+            with open(os.path.join(os.getcwd(), filename), "r") as f:  # open in readonly mode
+                # do your stuff
+                # Using readlines()
+                # startValue = 0
+                # endValue = 2
+                Lines = f.readlines()
+                # Strips the newline character
+                # print("New File")
+
+                for line in Lines:
+                    if lineCount < start_line:
+                        lineCount += 1
+                        continue
+                    if end_line is not None and lineCount >= end_line:
+                        return
+
+                    dataList = [
+                        tuple(map(int, match.group(1).split(",")))
+                        for match in re.finditer(r"\((.*?)\)", line)
+                    ]
+
+                    converted_data = []
+                    for a, b in dataList:
+
+                        x = floor(a / 3)
+                        y = floor(b / 2)
+                        k = floor((b % 2) * 3 + (a % 3)) + 3
+                        if k > 5:
+                            k %= 3
+
+                        converted_data.append([x, y, k])
+
                     lineCount += 1
-                    continue
-                if end_line is not None and lineCount >= end_line:
-                    return
 
-                dataList = [
-                    tuple(map(int, match.group(1).split(",")))
-                    for match in re.finditer(r"\((.*?)\)", line)
-                ]
-
-                converted_data = []
-                for a, b in dataList:
-
-                    x = floor(a / 3)
-                    y = floor(b / 2)
-                    k = floor((b % 2) * 3 + (a % 3)) + 3
-                    if k > 5:
-                        k %= 3
-
-                    converted_data.append([x, y, k])
-
-                lineCount += 1
-
-                cor = 1
-                while True:
-                    ph = PolykiteHeesch(np.array(converted_data), coronas=cor)
-                    print(f'trying {cor}-corona for {converted_data}...')
-                    ph.generate_variables()
-                    ph.construct_sat()
-                    ph.solve_sat()
-                    if ph.model is None:
-                        break
-                    if ph.model is not None and cor >= 2:
-                        ph.write(directory='tests/out', plot=True)
-                    cor += 1
+                    cor = 1
+                    while True:
+                        ph = PolykiteHeesch(np.array(converted_data), coronas=cor)
+                        print(f'{lineCount}. trying {cor}-corona for {converted_data}...')
+                        ph.generate_variables()
+                        ph.construct_sat()
+                        ph.solve_sat()
+                        if ph.model is None:
+                            break
+                        if ph.model is not None and cor >= 2:
+                            ph.write(directory='tests/out', plot=True)
+                        cor += 1
+                    f.write(f'({cor - 2}): {converted_data}')
 
 
 if __name__ == '__main__':
-    read_from_file(path="./data/", end_line=50)
+    read_from_file(path="./data/", end_line=200)
