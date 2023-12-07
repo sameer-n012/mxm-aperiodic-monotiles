@@ -9,16 +9,16 @@ from collections import deque
 class KiteGrid(Grid):
 
     def __init__(self, size: tuple, pos: int):
-        super().__init__(size, None)
+        super().__init__(size, np.array([[1, 0, 0], [0.5, sqrt(3) * 0.5, 0], [0, 0, 1]]))
         self.pos = pos  # TODO unused?
 
-    def apply_basis(self, coords: np.ndarray) -> np.array:
-        """
-        Turn n sets of 3-dim-coords into coords in standard basis R^2,
-        will be given as an n*3 matrix
-        """
-        # TODO complete
-        pass
+    # def apply_basis(self, coords: np.ndarray) -> np.array:
+    #     """
+    #     Turn n sets of 3-dim-coords into coords in standard basis R^2,
+    #     will be given as an n*3 matrix
+    #     """
+    #     # TODO complete
+    #     pass
 
     def indices(self) -> np.ndarray:
         """

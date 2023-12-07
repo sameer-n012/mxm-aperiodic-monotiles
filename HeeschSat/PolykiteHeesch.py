@@ -1,3 +1,5 @@
+import math
+
 from HeeschSat.Heesch import Heesch
 from HeeschSat.KiteGrid import KiteGrid
 import numpy as np
@@ -213,11 +215,11 @@ class PolykiteHeesch(Heesch):
         """
 
         return (
-            key[0] * self.grid.size[0] * self.grid.size[1] * self.num_rotations
-            + key[1] * self.grid.size[1] * self.num_rotations
-            + key[2] * self.num_rotations
-            + key[3]
-            + 1
+                key[0] * self.grid.size[0] * self.grid.size[1] * self.num_rotations
+                + key[1] * self.grid.size[1] * self.num_rotations
+                + key[2] * self.num_rotations
+                + key[3]
+                + 1
         )
 
     def plot(self, show=True, write=False, filename=None, directory=None):
@@ -228,15 +230,20 @@ class PolykiteHeesch(Heesch):
         fig, ax = plt.subplots(1)
         ax.set_aspect("equal")
 
+        print(np.array([list(self.grid.size)]))
+
         bounds_t = self.grid.apply_basis(np.array([list(self.grid.size)])).reshape(
-            1, 2
+            1, 3
         )[0]
+
+        print('here')
 
         i_s = np.array(
             [
-                (i, j)
+                (i, j, k)
                 for j in range(-self.grid.size[1], 2 * self.grid.size[1])
                 for i in range(-self.grid.size[0], 2 * self.grid.size[0])
+                for k in range(0, 6)
             ]
         )
         i_ts = self.grid.apply_basis(i_s).T
@@ -317,32 +324,31 @@ class PolykiteHeesch(Heesch):
                 # shape hexagons (filled, colored)
                 # alpha is transparency
                 # if trans[i][0] % 2 == 1:
-                hexagon = RegularPolygon(
-                    (c[0], c[1]),
-                    numVertices=6,
-                    radius=np.sqrt(1 / 3),
-                    # orientation=np.pi / 6,
-                    # alpha=0.5,
-                    color=colors[i],
-                    # facecolor=colors[i],
-                    # edgecolor="k",
-                    # linestyle='',
-                    linewidth=1 / self.grid.size[0],
-                    hatch="///" if trans[i][0] % 2 == 1 else "",
-                    zorder=2.0,
-                )
-                ax.add_patch(hexagon)
-                # else:
-                #     hexagon = RegularPolygon(
-                #         (c[0], c[1]),
-                #         numVertices=6,
-                #         radius=np.sqrt(1 / 3),
-                #         # orientation=np.pi / 6,
-                #         alpha=0.5,
-                #         facecolor=colors[i],
-                #         edgecolor="k",
-                #     )
-                #     ax.add_patch(hexagon)
+
+                x = [
+                    c[0],
+                    1.0/2 * math.cos((c[2] % 6) * 2 * math.pi / 6) + c[0],
+                    math.sqrt(1.0 / 3) * math.cos((c[2] % 6) * 2 * math.pi / 6 + math.pi / 6) + c[0],
+                    1.0/2 * math.cos(((c[2] + 1) % 6) * 2 * math.pi / 6) + c[0]
+                ]
+
+                y = [
+                    c[1],
+                    1.0/2 * math.sin((c[2] % 6) * 2 * math.pi / 6) + c[1],
+                    math.sqrt(1.0 / 3) * math.sin((c[2] % 6) * 2 * math.pi / 6 + math.pi / 6) + c[1],
+                    1.0/2 * math.sin(((c[2] + 1) % 6) * 2 * math.pi / 6) + c[1]
+                ]
+
+                ax.fill(x, y,
+                        # alpha=0.5,
+                        color=colors[i],
+                        # facecolor=colors[i],
+                        # edgecolor="k",
+                        # linestyle='',
+                        linewidth=1 / self.grid.size[0],
+                        hatch="///" if trans[i][0] % 2 == 1 else "",
+                        zorder=2.0,
+                        )
 
         ax.axis("off")
         # ax.set_xlim(-1, bounds_t[0]+1)

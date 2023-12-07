@@ -48,7 +48,7 @@ if __name__ == '__main__':
     ph.generate_variables()
     ph.construct_sat()
     ph.solve_sat()
-    ph.write(directory='tests/out', plot=False)
+    ph.write(directory='tests/out', plot=True)
 
     # Count transforms in each corona
     print(len(ph.transforms))
