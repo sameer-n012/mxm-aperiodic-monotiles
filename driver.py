@@ -24,7 +24,7 @@ def read_from_file(path: str, start_line: int = 0, end_line: int = -1):
 
     kite_points = []
     lineCount = 0
-    with open('results/all_kites.txt', "w+") as f:
+    with open('results/all_kites.txt', "w+") as fout:
 
         for filename in glob.glob(os.path.join(path, "*.txt")):
             with open(os.path.join(os.getcwd(), filename), "r") as f:  # open in readonly mode
@@ -73,7 +73,7 @@ def read_from_file(path: str, start_line: int = 0, end_line: int = -1):
                         if ph.model is not None and cor >= 2:
                             ph.write(directory='tests/out', plot=True)
                         cor += 1
-                    f.write(f'({cor - 2}): {converted_data}')
+                    fout.write(f'({cor - 1}): {converted_data}\n')
 
 
 if __name__ == '__main__':
