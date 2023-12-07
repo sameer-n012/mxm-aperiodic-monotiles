@@ -3,6 +3,7 @@ import os
 import re
 import sys
 from math import floor
+from time import time
 import numpy as np
 from HeeschSat.PolykiteHeesch import PolykiteHeesch
 
@@ -24,7 +25,7 @@ def read_from_file(path: str, start_line: int = 0, end_line: int = -1):
 
     kite_points = []
     lineCount = 0
-    with open('results/all_kites.txt', "w+") as fout:
+    with open(f'results/all_kites_{time()}.txt', "w+") as fout:
 
         for filename in glob.glob(os.path.join(path, "*.txt")):
             with open(os.path.join(os.getcwd(), filename), "r") as f:  # open in readonly mode
