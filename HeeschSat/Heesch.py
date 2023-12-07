@@ -76,6 +76,7 @@ class Heesch(ABC):
         k_0 = self.transforms[
             (0, int(self.grid.size[0] / 2), int(self.grid.size[1] / 2), 0)
         ]
+        print(k_0)
         s.add_clause([k_0[0]])
         self.num_clauses += 1
 
@@ -214,48 +215,13 @@ class Heesch(ABC):
         self.sat = None
         self.model = None
 
+    @abstractmethod
     def get_transform(self, idx: int):
-        """
-        Returns the transformation corresponding to the given index. The index
-        given should correspond to the index found in the self.transforms
-        dictionary. The key returned is a 4-tuple specified as (corona,
-        x-translate, y-translate, rotation). Runs in O(1) time.
-        """
+        pass
 
-        idx -= 1
-        if idx >= (self.k_cor + 1) * self.grid.size[0] * self.grid.size[1] * len(
-            self.rotation_matrices
-        ):
-            return None
-
-        v1 = int(
-            idx / (self.grid.size[0] * self.grid.size[1] * len(self.rotation_matrices))
-        )
-        idx -= v1 * (
-            self.grid.size[0] * self.grid.size[1] * len(self.rotation_matrices)
-        )
-        v2 = int(idx / (self.grid.size[1] * len(self.rotation_matrices)))
-        idx -= v2 * (self.grid.size[1] * len(self.rotation_matrices))
-        v3 = int(idx / (len(self.rotation_matrices)))
-        idx -= v3 * (len(self.rotation_matrices))
-
-        return v1, v2, v3, idx
-
+    @abstractmethod
     def get_transform_idx(self, key: tuple[int, int, int, int]):
-        """
-        Returns the index corresponding to the given key. The key should be a
-        4-tuple specified as (corona, x-translate, y-translate, rotation). The
-        index returned corresponds to the index found in the self.transforms
-        dictionary. Runs in O(1) time.
-        """
-
-        return (
-            key[0] * self.grid.size[0] * self.grid.size[1] * len(self.rotation_matrices)
-            + key[1] * self.grid.size[1] * len(self.rotation_matrices)
-            + key[2] * len(self.rotation_matrices)
-            + key[3]
-            + 1
-        )
+        pass
 
     def check_overlap_mp(self, i1: int):
         """
@@ -451,6 +417,7 @@ class Heesch(ABC):
                     f.write(f"Transform ID: {i} {self.get_transform(i)}: \n")
                     f.write(f"{str(self.transforms[t][1])}\n")
             else:
+                f.write(f'Transforms Used ({0}): \n')
                 f.write("\tNo Model (Unsolvable)")
 
         if plot:

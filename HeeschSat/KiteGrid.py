@@ -78,7 +78,8 @@ class KiteGrid(Grid):
             # multiply first two coords by rotation matrix
             new_kite = np.dot(rot_mat, kite[:2])
             # handles 3rd coordinate
-            new_kite.append((kite[2] + 1) % 6)
+            # new_kite.append((kite[2] + 1) % 6)
+            new_kite = np.hstack((new_kite, [(kite[2] + 1) % 6]))
             transformation.append(new_kite)
 
         return transformation
@@ -95,20 +96,24 @@ class KiteGrid(Grid):
             # handles 3rd coordinate
             match kite[2]:
                 case 0:
-                    new_kite.append(2)
-                    # print(new_kite, kite)
-                    # new_kite = np.hstack((new_kite, np.full(shape=(kite.shape[0], 2), fill_value=2)))
-                    # print(new_kite)
+                    # new_kite.append(2)
+                    new_kite = np.hstack((new_kite, [2]))
                 case 1:
-                    new_kite.append(1)
+                    # new_kite.append(1)
+                    new_kite = np.hstack((new_kite, [1]))
                 case 2:
-                    new_kite.append(0)
+                    # new_kite.append(0)
+                    new_kite = np.hstack((new_kite, [0]))
                 case 3:
-                    new_kite.append(5)
+                    # new_kite.append(5)
+                    new_kite = np.hstack((new_kite, [5]))
                 case 4:
-                    new_kite.append(4)
+                    # new_kite.append(4)
+                    new_kite = np.hstack((new_kite, [4]))
+
                 case 5:
-                    new_kite.append(3)
+                    # new_kite.append(3)
+                    new_kite = np.hstack((new_kite, [3]))
             transformation.append(new_kite)
 
         return transformation
@@ -120,7 +125,7 @@ class KiteGrid(Grid):
         # add original tile and reflected tile to stack
         stack.append(KiteGrid._reflect(tile))
         stack.append(tile)
-        while KiteGrid._rotate(stack[-1]) != tile:
+        while (KiteGrid._rotate(stack[-1]) != tile).any():
             # find reflected & non-reflected rotation of most recently added tile
             ref_rot_tile = KiteGrid._reflect(KiteGrid._rotate(stack[-1]))
             rot_tile = KiteGrid._rotate(stack[-1])

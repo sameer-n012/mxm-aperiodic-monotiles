@@ -18,6 +18,7 @@ class PolykiteHeesch(Heesch):
             grid_size = int(2 * self.shape_rad * (self.k_cor + 1))
             grid_size = (grid_size, grid_size, 6)
         self.grid = KiteGrid(grid_size, 0)
+        self.num_rotations = None
 
     def generate_variables(self, start_corona: int = 0):
         # TODO implement, not changed much yet
@@ -37,12 +38,19 @@ class PolykiteHeesch(Heesch):
         self.times[0] = time()
         # midpoint of the grid
         mid = int(self.grid.size[0] / 2), int(self.grid.size[1] / 2)
+
+        # get the used rotation matrices (some might result in rotational symmetry)
+        # O(rm) time
+        t_rotations = self.grid.get_transformations(self.shape)
+        self.num_rotations = len(t_rotations)
+        rotate_indices = self.check_rotational_symmetry()
+
         # calculate the maximum number of transform
         max_transforms = (
                 (self.k_cor + 1)
                 * self.grid.size[0]
                 * self.grid.size[1]
-                * len(self.rotation_matrices)
+                * self.num_rotations
         )
 
         # include single 0-corona transform as original shape
@@ -57,19 +65,17 @@ class PolykiteHeesch(Heesch):
         halo_set = set(map(tuple, halo)) - transform_set
 
         key = (0, mid[0], mid[1], 0)
+        print(key)
+        print(self.num_rotations)
+        print(self.get_transform_idx(key))
         self.transforms[key] = self.get_transform_idx(key), transform, halo, transform_set, halo_set
-
-        # get the used rotation matrices (some might result in rotational symmetry)
-        # O(rm) time
-        t_rotations = self.grid.get_transformations(self.shape)
-        rotate_indices = self.check_rotational_symmetry()
 
         corona_halos = [set() for _ in range(0, self.k_cor + 1)]
         corona_halos[0] = halo_set
 
         # transform variables (if a transform is used)
         # O(kn^4rm^2) time
-        offset = self.grid.size[0] * self.grid.size[1] * len(self.rotation_matrices)
+        offset = self.grid.size[0] * self.grid.size[1] * self.num_rotations
         for idx, val in enumerate(itertools.product(range(start_corona, self.k_cor + 1),
                                                     range(0, self.grid.size[0]),
                                                     range(0, self.grid.size[1]),
@@ -176,6 +182,43 @@ class PolykiteHeesch(Heesch):
                 seen.append(set(map(tuple, rt)))
 
         return out
+
+    def get_transform(self, idx: int):
+        """
+        Returns the transformation corresponding to the given index. The index
+        given should correspond to the index found in the self.transforms
+        dictionary. The key returned is a 4-tuple specified as (corona,
+        x-translate, y-translate, rotation). Runs in O(1) time.
+        """
+
+        idx -= 1
+        if idx >= (self.k_cor + 1) * self.grid.size[0] * self.grid.size[1] * self.num_rotations:
+            return None
+
+        v1 = int(idx / (self.grid.size[0] * self.grid.size[1] * self.num_rotations))
+        idx -= v1 * (self.grid.size[0] * self.grid.size[1] * self.num_rotations)
+        v2 = int(idx / (self.grid.size[1] * self.num_rotations))
+        idx -= v2 * (self.grid.size[1] * self.num_rotations)
+        v3 = int(idx / self.num_rotations)
+        idx -= v3 * self.num_rotations
+
+        return v1, v2, v3, idx
+
+    def get_transform_idx(self, key: tuple[int, int, int, int]):
+        """
+        Returns the index corresponding to the given key. The key should be a
+        4-tuple specified as (corona, x-translate, y-translate, rotation). The
+        index returned corresponds to the index found in the self.transforms
+        dictionary. Runs in O(1) time.
+        """
+
+        return (
+            key[0] * self.grid.size[0] * self.grid.size[1] * self.num_rotations
+            + key[1] * self.grid.size[1] * self.num_rotations
+            + key[2] * self.num_rotations
+            + key[3]
+            + 1
+        )
 
     def plot(self, show=True, write=False, filename=None, directory=None):
         # TODO edit

@@ -187,6 +187,49 @@ class PolyhexagonHeesch(Heesch):
 
         return out
 
+    def get_transform(self, idx: int):
+        """
+        Returns the transformation corresponding to the given index. The index
+        given should correspond to the index found in the self.transforms
+        dictionary. The key returned is a 4-tuple specified as (corona,
+        x-translate, y-translate, rotation). Runs in O(1) time.
+        """
+
+        idx -= 1
+        if idx >= (self.k_cor + 1) * self.grid.size[0] * self.grid.size[1] * len(
+            self.rotation_matrices
+        ):
+            return None
+
+        v1 = int(
+            idx / (self.grid.size[0] * self.grid.size[1] * len(self.rotation_matrices))
+        )
+        idx -= v1 * (
+            self.grid.size[0] * self.grid.size[1] * len(self.rotation_matrices)
+        )
+        v2 = int(idx / (self.grid.size[1] * len(self.rotation_matrices)))
+        idx -= v2 * (self.grid.size[1] * len(self.rotation_matrices))
+        v3 = int(idx / (len(self.rotation_matrices)))
+        idx -= v3 * (len(self.rotation_matrices))
+
+        return v1, v2, v3, idx
+
+    def get_transform_idx(self, key: tuple[int, int, int, int]):
+        """
+        Returns the index corresponding to the given key. The key should be a
+        4-tuple specified as (corona, x-translate, y-translate, rotation). The
+        index returned corresponds to the index found in the self.transforms
+        dictionary. Runs in O(1) time.
+        """
+
+        return (
+            key[0] * self.grid.size[0] * self.grid.size[1] * len(self.rotation_matrices)
+            + key[1] * self.grid.size[1] * len(self.rotation_matrices)
+            + key[2] * len(self.rotation_matrices)
+            + key[3]
+            + 1
+        )
+
     def plot(self, show=True, write=False, filename=None, directory=None):
         if self.model is None:
             return
