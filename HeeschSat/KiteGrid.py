@@ -152,7 +152,7 @@ class KiteGrid(Grid):
     @staticmethod
     def _reflect(tile: list):
         ref_mat = np.array([[-1, 0],
-                            [0, 1]])
+                            [1, 1]])
         # transformation will be a list of each original kite reflected.
         transformation = []
         for kite in tile:
@@ -162,23 +162,22 @@ class KiteGrid(Grid):
             match kite[2]:
                 case 0:
                     # new_kite.append(2)
-                    new_kite = np.hstack((new_kite, [2]))
+                    new_kite = np.hstack((new_kite, [1]))
                 case 1:
                     # new_kite.append(1)
-                    new_kite = np.hstack((new_kite, [1]))
+                    new_kite = np.hstack((new_kite, [0]))
                 case 2:
                     # new_kite.append(0)
-                    new_kite = np.hstack((new_kite, [0]))
+                    new_kite = np.hstack((new_kite, [5]))
                 case 3:
                     # new_kite.append(5)
-                    new_kite = np.hstack((new_kite, [5]))
+                    new_kite = np.hstack((new_kite, [4]))
                 case 4:
                     # new_kite.append(4)
-                    new_kite = np.hstack((new_kite, [4]))
-
+                    new_kite = np.hstack((new_kite, [3]))
                 case 5:
                     # new_kite.append(3)
-                    new_kite = np.hstack((new_kite, [3]))
+                    new_kite = np.hstack((new_kite, [2]))
             transformation.append(new_kite)
 
         return transformation

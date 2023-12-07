@@ -71,8 +71,6 @@ class PolykiteHeesch(Heesch):
 
         corona_halos = [set() for _ in range(0, self.k_cor + 1)]
         corona_halos[0] = halo_set
-        print(halo_set, transform_set, halo)
-        print('1', self.get_transform_idx(key))
 
         # transform variables (if a transform is used)
         # O(kn^4rm^2) time
@@ -134,9 +132,6 @@ class PolykiteHeesch(Heesch):
             # maybe could generate halos of an entire corona
             # precompute set reps of each transform
             transform_set = set(map(tuple, transform))
-            if transform_set == {(2, 2, 2), (2, 2, 3)}:
-                print('found: ', transform_set)
-                print('aaa: ', self.grid.is_overlapping_set(corona_halos[val[0] - 1], transform_set))
             if not self.grid.is_overlapping_set(corona_halos[val[0] - 1], transform_set):
                 continue
 
@@ -145,12 +140,10 @@ class PolykiteHeesch(Heesch):
             halo_set = set(map(tuple, halo)) - transform_set
             corona_halos[val[0]] = corona_halos[val[0]] | halo_set
             self.transforms[tuple(val)] = (idx + offset + 1, transform, halo, transform_set, halo_set)
-            print(idx + offset + 1, transform)
 
         self.times[1] = time()
 
         # cell variables (if a cell is taken)
-        print(max_transforms)
         offset = max_transforms + 1
         for idx, i in enumerate(self.grid.indices()):
             self.cells[tuple(i)] = offset + idx
@@ -230,7 +223,6 @@ class PolykiteHeesch(Heesch):
 
     def plot(self, show=True, write=False, filename=None, directory=None):
 
-        # TODO edit
         if self.model is None:
             return
 
@@ -315,8 +307,6 @@ class PolykiteHeesch(Heesch):
             shapes.append(self.transforms[t][1])
 
         shapes = np.array(shapes)
-
-        # print(colors)
 
         # shape hexagons
         for i, s in enumerate(shapes):

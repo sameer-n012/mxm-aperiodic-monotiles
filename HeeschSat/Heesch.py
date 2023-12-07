@@ -45,6 +45,7 @@ class Heesch(ABC):
         self.shape_rad = None
         self.sat = None
         self.model = None
+        self.formula = None
         self.num_clauses = 0
         self.times = [0.0] * Heesch.num_timestamps
         self.ops = [0] * Heesch.num_timestamps
@@ -194,9 +195,9 @@ class Heesch(ABC):
         #     self.num_clauses += 1
 
         self.times[11] = time()
-        print('formula\n\n', formula)
 
         self.sat = s
+        self.formula = formula
         return self.sat
 
     def solve_sat(self) -> list:
