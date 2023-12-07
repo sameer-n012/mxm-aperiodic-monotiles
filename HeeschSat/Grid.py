@@ -36,7 +36,6 @@ class Grid(ABC):
         ] where each row is a distinct cell. Runs in O(n^2) time for a grid of
         size n*n.
         """
-
         arr = np.array([self.is_adjacent(i, cell) for i in self.indices()]).reshape(self.size, order='F')
         return np.transpose(np.nonzero(arr))
 

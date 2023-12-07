@@ -69,6 +69,8 @@ class Heesch(ABC):
 
         s = Solver(name="g3")
 
+        formula = []
+
         self.times[3] = time()
 
         # 0-corona always used
@@ -76,8 +78,8 @@ class Heesch(ABC):
         k_0 = self.transforms[
             (0, int(self.grid.size[0] / 2), int(self.grid.size[1] / 2), 0)
         ]
-        print(k_0)
         s.add_clause([k_0[0]])
+        formula.append([k_0[0]])
         self.num_clauses += 1
 
         self.times[4] = time()
@@ -89,6 +91,7 @@ class Heesch(ABC):
             # O(m) time
             for c in v[1]:
                 s.add_clause([-v[0], self.cells[tuple(c)]])
+                formula.append([-v[0], self.cells[tuple(c)]])
                 self.num_clauses += 1
 
         self.times[5] = time()
@@ -105,6 +108,7 @@ class Heesch(ABC):
                 if list(k1) in v2[1].tolist():
                     lst.append(v2[0])
             s.add_clause(lst)
+            formula.append(lst)
             self.num_clauses += 1
 
         self.times[6] = time()
@@ -121,6 +125,7 @@ class Heesch(ABC):
             # O(m) time
             for c in v[2]:
                 s.add_clause([-v[0], self.cells[tuple(c)]])
+                formula.append([-v[0], self.cells[tuple(c)]])
                 self.num_clauses += 1
 
         self.times[7] = time()
@@ -135,6 +140,7 @@ class Heesch(ABC):
             ):
                 for l in lst:
                     s.add_clause(l)
+                    formula.append(l)
                     self.num_clauses += 1
 
         self.times[8] = time()
@@ -150,6 +156,7 @@ class Heesch(ABC):
             ):
                 for l in lst:
                     s.add_clause(l)
+                    formula.append(l)
                     self.num_clauses += 1
 
         self.times[9] = time()
@@ -167,6 +174,7 @@ class Heesch(ABC):
                 # halo are the same
                 if self.grid.is_overlapping(v1[1], v2[2]):  # O(m)
                     s.add_clause([-v1[0], -v2[0]])
+                    formula.append([-v1[0], -v2[0]])
                     self.num_clauses += 1
 
         self.times[10] = time()
@@ -186,6 +194,7 @@ class Heesch(ABC):
         #     self.num_clauses += 1
 
         self.times[11] = time()
+        print('formula\n\n', formula)
 
         self.sat = s
         return self.sat
@@ -271,10 +280,6 @@ class Heesch(ABC):
 
             # checks if any two rows in the transform are the same
             # O(m) time
-            # print(len(v1), len(v2))
-            if len(v1) != 5 or len(v2) != 5:
-                print(v1, v2)
-                raise Exception(f'akdslkajdlsakd \n {len(v1)}, {len(v2)}, {v1}, {v2}')
             if self.grid.is_overlapping_set(v1[3], v2[3]):  # O(m) time
                 out.append([-v1[0], -v2[0]])
 

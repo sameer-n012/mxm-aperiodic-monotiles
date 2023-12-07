@@ -67,18 +67,17 @@ class PolykiteHeesch(Heesch):
         halo_set = set(map(tuple, halo)) - transform_set
 
         key = (0, mid[0], mid[1], 0)
-        print(key)
-        print(self.num_rotations)
-        print(self.get_transform_idx(key))
         self.transforms[key] = self.get_transform_idx(key), transform, halo, transform_set, halo_set
 
         corona_halos = [set() for _ in range(0, self.k_cor + 1)]
         corona_halos[0] = halo_set
+        print(halo_set, transform_set, halo)
+        print('1', self.get_transform_idx(key))
 
         # transform variables (if a transform is used)
         # O(kn^4rm^2) time
         offset = self.grid.size[0] * self.grid.size[1] * self.num_rotations
-        for idx, val in enumerate(itertools.product(range(start_corona, self.k_cor + 1),
+        for idx, val in enumerate(itertools.product(range(1, self.k_cor + 1),
                                                     range(0, self.grid.size[0]),
                                                     range(0, self.grid.size[1]),
                                                     range(0, len(t_rotations))
@@ -101,6 +100,7 @@ class PolykiteHeesch(Heesch):
             translate_mat = np.empty(self.shape_size, dtype=int)  # O(m) time
             translate_mat[:, 0] = val[1]  # O(m) time
             translate_mat[:, 1] = val[2]  # O(m) time
+            translate_mat[:, 2] = 0
             transform = t_rotations[val[3]] + translate_mat  # O(m) time
 
             # ignore any transforms that are more than k_cor*shape_radius from the center
@@ -112,8 +112,8 @@ class PolykiteHeesch(Heesch):
 
             # ignore any transforms that are less than k_cor from the center
             # O(m) time
-            if max(abs(val[1] - mid[0]), abs(val[2] - mid[1])) < (val[0] - 1):
-                continue
+            # if max(abs(val[1] - mid[0]), abs(val[2] - mid[1])) < (val[0] - 1):
+            #     continue
 
             # only include transforms that fall within the bounds of the grid
             if not self.grid.in_bounds(transform):
@@ -134,6 +134,9 @@ class PolykiteHeesch(Heesch):
             # maybe could generate halos of an entire corona
             # precompute set reps of each transform
             transform_set = set(map(tuple, transform))
+            if transform_set == {(2, 2, 2), (2, 2, 3)}:
+                print('found: ', transform_set)
+                print('aaa: ', self.grid.is_overlapping_set(corona_halos[val[0] - 1], transform_set))
             if not self.grid.is_overlapping_set(corona_halos[val[0] - 1], transform_set):
                 continue
 
@@ -142,10 +145,12 @@ class PolykiteHeesch(Heesch):
             halo_set = set(map(tuple, halo)) - transform_set
             corona_halos[val[0]] = corona_halos[val[0]] | halo_set
             self.transforms[tuple(val)] = (idx + offset + 1, transform, halo, transform_set, halo_set)
+            print(idx + offset + 1, transform)
 
         self.times[1] = time()
 
         # cell variables (if a cell is taken)
+        print(max_transforms)
         offset = max_transforms + 1
         for idx, i in enumerate(self.grid.indices()):
             self.cells[tuple(i)] = offset + idx
@@ -183,7 +188,8 @@ class PolykiteHeesch(Heesch):
             if out[idx] == 1:
                 seen.append(set(map(tuple, rt)))
 
-        return out
+        # return out
+        return [1] * len(t_rotations)
 
     def get_transform(self, idx: int):
         """
@@ -223,6 +229,7 @@ class PolykiteHeesch(Heesch):
         )
 
     def plot(self, show=True, write=False, filename=None, directory=None):
+
         # TODO edit
         if self.model is None:
             return
@@ -230,13 +237,9 @@ class PolykiteHeesch(Heesch):
         fig, ax = plt.subplots(1)
         ax.set_aspect("equal")
 
-        print(np.array([list(self.grid.size)]))
-
         bounds_t = self.grid.apply_basis(np.array([list(self.grid.size)])).reshape(
             1, 3
         )[0]
-
-        print('here')
 
         i_s = np.array(
             [

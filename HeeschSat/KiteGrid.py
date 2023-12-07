@@ -20,6 +20,31 @@ class KiteGrid(Grid):
     #     # TODO complete
     #     pass
 
+    def haloIdx(self, cell: tuple[int]) -> np.ndarray:
+        """
+        Returns the indices of the cells that are adjacent to the current cell
+        based on the adjacency function the grid was created with. The cells
+        returned will not be in any particular order. The cells returned will
+        be in the form: [
+            [ x_1, y_1 ],
+            [ x_2, y_2 ],
+            ...
+            [ x_n, y_n ]
+        ] where each row is a distinct cell. Runs in O(n^2) time for a grid of
+        size n*n.
+        """
+
+        out = []
+        for j in range(self.size[1]):
+            for i in range(self.size[0]):
+                for k in range(self.size[2]):
+                    if self.is_adjacent([i, j, k], cell):
+                        out.append([i, j, k])
+
+        # arr = np.array([self.is_adjacent(i, cell) for i in self.indices()]).reshape(self.size, order='C')
+        # return np.transpose(np.nonzero(arr))
+        return out
+
     def indices(self) -> np.ndarray:
         """
         Returns an array of indices on the grid. Runs in O(kn^2) time for a grid
@@ -30,43 +55,83 @@ class KiteGrid(Grid):
 
     @staticmethod
     def is_adjacent(x, y):
+
+        # TODO - do we count corners touching as adjacent??
+
+        # case where two kites are in same hex
         if x[0] == y[0] and x[1] == y[1]:
-            return False
+            # return np.abs(x[2] - y[2]) == 1 or np.abs(x[2] - y[2]) == 5
+            return True
+
         match x[2]:
             case 0:
                 return (
-                        x[0] + 1 == y[0] and
-                        ((x[1] == y[1] and (y[2] == 3 or y[2] == 4)) or
-                         (x[1] == y[1] - 1 and (y[2] == 2 or y[2] == 3)))
+                    (x[0] + 1 == y[0] and x[1] == y[1] and (y[2] == 2 or y[2] == 3)) or
+                    (x[0] == y[0] and x[1] + 1 == y[1] and (y[2] == 3 or y[2] == 4))
                 )
             case 1:
                 return (
-                        (x[0] == y[0] and x[1] + 1 == y[1] and (y[2] == 5 or y[2] == 4)) or
-                        (x[0] + 1 == y[0] and x[1] == y[1] and (y[2] == 3 or y[2] == 4))
+                    (x[0] == y[0] and x[1] + 1 == y[1] and (y[2] == 3 or y[2] == 4)) or
+                    (x[0] - 1 == y[0] and x[1] + 1 == y[1] and (y[2] == 4 or y[2] == 5))
                 )
             case 2:
                 return (
-                        x[1] + 1 == y[1] and
-                        ((x[0] == y[0] and (y[2] == 4 or y[2] == 5)) or
-                         (x[0] - 1 == y[0] and (y[2] == 5 or y[2] == 0)))
+                    (x[0] - 1 == y[0] and x[1] + 1 == y[1] and (y[2] == 4 or y[2] == 5)) or
+                    (x[0] - 1 == y[0] and x[1] == y[1] and (y[2] == 0 or y[2] == 5))
                 )
             case 3:
                 return (
-                        x[0] - 1 == y[0] and
-                        ((x[1] == y[1] and (y[2] == 1 or y[2] == 0)) or
-                         (x[1] + 1 == y[1] and (y[2] == 5 or y[2] == 0)))
+                    (x[0] - 1 == y[0] and x[1] == y[1] and (y[2] == 0 or y[2] == 5)) or
+                    (x[0] == y[0] and x[1] - 1 == y[1] and (y[2] == 0 or y[2] == 1))
                 )
             case 4:
                 return (
-                        (x[0] - 1 == y[0] and x[1] == y[1] and (y[2] == 1 or y[2] == 0)) or
-                        (x[0] == y[0] and x[1] - 1 == y[1] and (y[2] == 1 or y[2] == 2))
+                    (x[0] == y[0] and x[1] - 1 == y[1] and (y[2] == 0 or y[2] == 1)) or
+                    (x[0] + 1 == y[0] and x[1] - 1 == y[1] and (y[2] == 1 or y[2] == 2))
                 )
             case 5:
                 return (
-                        x[1] - 1 == y[1] and
-                        ((x[0] == y[0] and (y[2] == 1 or y[2] == 2)) or
-                         (x[0] + 1 == y[0] and (y[2] == 2 or y[2] == 3)))
+                    (x[0] + 1 == y[0] and x[1] - 1 == y[1] and (y[2] == 1 or y[2] == 2)) or
+                    (x[0] + 1 == y[0] and x[1] == y[1] and (y[2] == 2 or y[2] == 3))
                 )
+            case _:
+                return False
+
+        # match x[2]:
+        #     case 0:
+        #         return (
+        #                 x[0] + 1 == y[0] and
+        #                 ((x[1] == y[1] and (y[2] == 3 or y[2] == 4)) or
+        #                  (x[1] == y[1] - 1 and (y[2] == 2 or y[2] == 3)))
+        #         )
+        #     case 1:
+        #         return (
+        #                 (x[0] == y[0] and x[1] + 1 == y[1] and (y[2] == 5 or y[2] == 4)) or
+        #                 (x[0] + 1 == y[0] and x[1] == y[1] and (y[2] == 3 or y[2] == 4))
+        #         )
+        #     case 2:
+        #         return (
+        #                 x[1] + 1 == y[1] and
+        #                 ((x[0] == y[0] and (y[2] == 4 or y[2] == 5)) or
+        #                  (x[0] - 1 == y[0] and (y[2] == 5 or y[2] == 0)))
+        #         )
+        #     case 3:
+        #         return (
+        #                 x[0] - 1 == y[0] and
+        #                 ((x[1] == y[1] and (y[2] == 1 or y[2] == 0)) or
+        #                  (x[1] + 1 == y[1] and (y[2] == 5 or y[2] == 0)))
+        #         )
+        #     case 4:
+        #         return (
+        #                 (x[0] - 1 == y[0] and x[1] == y[1] and (y[2] == 1 or y[2] == 0)) or
+        #                 (x[0] == y[0] and x[1] - 1 == y[1] and (y[2] == 1 or y[2] == 2))
+        #         )
+        #     case 5:
+        #         return (
+        #                 x[1] - 1 == y[1] and
+        #                 ((x[0] == y[0] and (y[2] == 1 or y[2] == 2)) or
+        #                  (x[0] + 1 == y[0] and (y[2] == 2 or y[2] == 3)))
+        #         )
 
     @staticmethod
     def _rotate(tile: list):

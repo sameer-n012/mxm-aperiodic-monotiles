@@ -41,10 +41,10 @@ if __name__ == '__main__':
 
     tk1 = np.array([
         [0, 0, 0],
-        [1, 0, 2]
+        [0, 0, 1]
     ])
 
-    ph = PolykiteHeesch(tk1, coronas=0)
+    ph = PolykiteHeesch(tk1, coronas=2)
     ph.generate_variables()
     ph.construct_sat()
     ph.solve_sat()
