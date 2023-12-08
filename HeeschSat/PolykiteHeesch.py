@@ -245,7 +245,7 @@ class PolykiteHeesch(Heesch):
         for i, i_t in enumerate(i_ts):
             if (
                     i_t[0] < 0 * bounds_t[0]
-                    or i_t[1] < 0 * bounds_t[0]
+                    or i_t[1] < 0 * bounds_t[1]
                     or i_t[0] > 1 * bounds_t[0]
                     or i_t[1] > 1 * bounds_t[1]
             ):
@@ -267,16 +267,16 @@ class PolykiteHeesch(Heesch):
             ax.add_patch(hexagon)
 
             # grid coords
-            ax.text(
-                i_t[0],
-                i_t[1],
-                f"{i_s[i][0]}, {i_s[i][1]}",
-                verticalalignment="center",
-                horizontalalignment="center",
-                clip_on=True,
-                fontsize=60 / self.grid.size[0],
-                zorder=5.0,
-            )
+            # ax.text(
+            #     i_t[0],
+            #     i_t[1],
+            #     f"{i_s[i][0]}, {i_s[i][1]}",
+            #     verticalalignment="center",
+            #     horizontalalignment="center",
+            #     clip_on=True,
+            #     fontsize=60 / self.grid.size[0],
+            #     zorder=5.0,
+            # )
 
         shapes = []
         trans = []
@@ -294,7 +294,7 @@ class PolykiteHeesch(Heesch):
                 Heesch.plot_colors[
                     (
                             Heesch.c_majors[
-                                (Heesch.c_spacing * t[0]) % len(Heesch.c_majors)
+                                (Heesch.c_spacing * (t[0])) % len(Heesch.c_majors)
                                 ]
                             + 2 * c_idx[(Heesch.c_spacing * t[0]) % len(c_idx)]
                     )

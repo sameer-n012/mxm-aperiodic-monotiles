@@ -25,7 +25,7 @@ def read_from_file(path: str, start_line: int = 0, end_line: int = -1):
 
     kite_points = []
     lineCount = 0
-    with open(f'results/all_kites_{time()}.txt', "w+") as fout:
+    with open(f'results/all_kites_{str(int(time()))}.txt', "w+") as fout:
 
         for filename in glob.glob(os.path.join(path, "*.txt")):
             with open(os.path.join(os.getcwd(), filename), "r") as f:  # open in readonly mode
@@ -60,8 +60,6 @@ def read_from_file(path: str, start_line: int = 0, end_line: int = -1):
 
                         converted_data.append([x, y, k])
 
-                    lineCount += 1
-
                     cor = 1
                     while True:
                         ph = PolykiteHeesch(np.array(converted_data), coronas=cor)
@@ -76,6 +74,8 @@ def read_from_file(path: str, start_line: int = 0, end_line: int = -1):
                         cor += 1
                     fout.write(f'({cor - 1}): {converted_data}\n')
 
+                    lineCount += 1
+
 
 if __name__ == '__main__':
-    read_from_file(path="./data/", end_line=200)
+    read_from_file(path="./data/", start_line=300, end_line=1000)

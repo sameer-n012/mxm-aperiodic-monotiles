@@ -49,7 +49,25 @@ if __name__ == '__main__':
         [1, 0, 2]
     ])
 
-    ph = PolykiteHeesch(tk1, coronas=3)
+    tk3 = np.array([
+         [0, 0, 1],
+         [0, 0, 2],
+         [0, 1, 3],
+         [0, 1, 4],
+         [1, 0, 2],
+         [1, 0, 3],
+         [1, 0, 4],
+         [1, 0, 5]
+    ])
+
+    tk4 = np.array([
+        [0, 0, 0],
+        [0, 0, 1],
+        [1, 0, 2],
+        [1, 0, 1]
+    ])
+
+    ph = PolykiteHeesch(tk4, coronas=1)
     ph.generate_variables()
     ph.construct_sat()
     ph.solve_sat()
